@@ -6,81 +6,9 @@ from cmp.tools import metodo_predictivo_no_recursivo
 from cmp.tools import nfa_to_dfa
 from cmp.tools import automata_union, automata_concatenation, automata_closure, automata_minimization
 from cmp.tools import get_printer
+from cmp.tools import Node, AtomicNode, UnaryNode, BinaryNode, EpsilonNode, SymbolNode, ClosureNode, UnionNode, ConcatNode
 from pprint import pprint as pp
 import pydot
-
-class Node:
-    def evaluate(self):
-        raise NotImplementedError()
-        
-class AtomicNode(Node):
-    def __init__(self, lex):
-        self.lex = lex
-
-class UnaryNode(Node):
-    def __init__(self, node):
-        self.node = node
-        
-    def evaluate(self):
-        value = self.node.evaluate() 
-        return self.operate(value)
-    
-    @staticmethod
-    def operate(value):
-        raise NotImplementedError()
-        
-class BinaryNode(Node):
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
-        
-    def evaluate(self):
-        lvalue = self.left.evaluate() 
-        rvalue = self.right.evaluate()
-        return self.operate(lvalue, rvalue)
-    
-    @staticmethod
-    def operate(lvalue, rvalue):
-        raise NotImplementedError()
-        
-
-EPSILON = 'ε'
-
-class EpsilonNode(AtomicNode):
-    def evaluate(self):
-        s = self.lex
-        states = 0
-        start = 0
-        finals = [0]
-        transitions = {}
-        return NFA(states, finals, transitions, start)
-
-class SymbolNode(AtomicNode):
-    def evaluate(self):
-        s = self.lex
-        states = 2
-        start = 0
-        finals = [1]
-        transitions = {}
-        transitions[(0, s)] = [1]
-        return NFA(states, finals, transitions, start)
-
-class ClosureNode(UnaryNode):
-    @staticmethod
-    def operate(value):
-        return automata_closure(value)
-
-class UnionNode(BinaryNode):
-    @staticmethod
-    def operate(lvalue, rvalue):
-        return automata_union(lvalue, rvalue)
-
-class ConcatNode(BinaryNode):
-    @staticmethod
-    def operate(lvalue, rvalue):
-        return automata_concatenation(lvalue, rvalue)
-
-
 
 G = Grammar()
 
@@ -140,8 +68,7 @@ printer = get_printer(AtomicNode=AtomicNode, UnaryNode=UnaryNode, BinaryNode=Bin
 
 class Regex:
     def __init__(self, regular_exp):
-        print(regular_exp)
-        
+
         self.tokens = regex_tokenizer(regular_exp, G, False)
         self.left_parse = parser(self.tokens)
         self.ast = evaluate_parse(self.left_parse, self.tokens)
@@ -152,7 +79,7 @@ class Regex:
 
         
         #Debugin
-        print(printer(self.ast))
+        # print(printer(self.ast))
         # self.mini._repr_png_().write_png(f'{regular_exp}.png')
 
     def __call__(string):

@@ -180,6 +180,7 @@ def deprecated_metodo_predictivo_no_recursivo(G, M=None, firsts=None, follows=No
         if follows is None:
             follows = compute_follows(G, firsts)
         M = build_parsing_table(G, firsts, follows)
+        # pprint(M)
 
     def parser(w):
 
@@ -188,6 +189,7 @@ def deprecated_metodo_predictivo_no_recursivo(G, M=None, firsts=None, follows=No
         output = []
 
         while True:
+            # print(stack, cursor)
             top = stack.pop()
             a = w[cursor]
 
