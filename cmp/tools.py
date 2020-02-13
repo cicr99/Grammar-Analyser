@@ -1,8 +1,70 @@
-from utils import *
+from cmp.utils import *
 from itertools import islice
-from nfa_dfa import *
-from automata import *
+from cmp.nfa_dfa import *
+from cmp.automata import *
+import cmp.visitor as visitor
 
+class Node:
+    def evaluate(self):
+        raise NotImplementedError()
+
+class AtomicNode(Node):
+    def __init__(self, lex):
+        self.lex = lex
+
+class UnaryNode(Node):
+    def __init__(self, node):
+        self.node = node
+
+    def evaluate(self):
+        value = self.node.evaluate()
+        return self.operate(value)
+
+    @staticmethod
+    def operate(value):
+        raise NotImplementedError()
+
+class BinaryNode(Node):
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right
+
+    def evaluate(self):
+        lvalue = self.left.evaluate()
+        rvalue = self.right.evaluate()
+        return self.operate(lvalue, rvalue)
+
+    @staticmethod
+    def operate(lvalue, rvalue):
+        raise NotImplementedError()
+
+
+class EpsilonNode(AtomicNode):
+    def evaluate(self):
+        return NFA(1, [0], {})
+
+
+class SymbolNode(AtomicNode):
+    def evaluate(self):
+        s = self.lex
+        return NFA(2, [1], {(0, s) : [1],})
+
+
+class ClosureNode(UnaryNode):
+    @staticmethod
+    def operate(value):
+        return automata_closure(value)
+
+class UnionNode(BinaryNode):
+    @staticmethod
+    def operate(lvalue, rvalue):
+        return automata_union(lvalue, rvalue)
+
+
+class ConcatNode(BinaryNode):
+    @staticmethod
+    def operate(lvalue, rvalue):
+        return automata_concatenation(lvalue, rvalue)
 
 def compute_local_first(firsts, alpha):
     first_alpha = ContainerSet()
@@ -147,12 +209,41 @@ def deprecated_metodo_predictivo_no_recursivo(G, M=None, firsts=None, follows=No
     return parser
 
 
-def metodo_predictivo_no_recursivo(G, M):
+def metodo_predictivo_no_recursivo(G, M = None):
     parser = deprecated_metodo_predictivo_no_recursivo(G, M)
     def updated(tokens):
         return parser([t.token_type for t in tokens])
     return updated
 
+
+
+def get_printer(AtomicNode=AtomicNode, UnaryNode=UnaryNode, BinaryNode=BinaryNode, ):
+    
+    class PrintVisitor(object):
+        @visitor.on('node')
+        def visit(self, node, tabs):
+            pass
+
+        @visitor.when(UnaryNode)
+        def visit(self, node, tabs=0):
+            ans = '\t' * tabs + f'\\__<expr> {node.__class__.__name__}'
+            child = self.visit(node.node, tabs + 1)
+            return f'{ans}\n{child}'
+
+        @visitor.when(BinaryNode)
+        def visit(self, node, tabs=0):
+            ans = '\t' * tabs + f'\\__<expr> {node.__class__.__name__} <expr>'
+            left = self.visit(node.left, tabs + 1)
+            right = self.visit(node.right, tabs + 1)
+            return f'{ans}\n{left}\n{right}'
+
+        @visitor.when(AtomicNode)
+        def visit(self, node, tabs=0):
+            return '\t' * tabs + f'\\__ {node.__class__.__name__}: {node.lex}'
+
+    printer = PrintVisitor()
+    return (lambda ast: printer.visit(ast))
+    
 
 def evaluate_parse(left_parse, tokens):
     if not left_parse or not tokens:
@@ -196,24 +287,44 @@ def move(automaton, states, symbol):
     moves = set()
     for state in states:
         try:
-            aux = automaton.transitions[state][symbol]
-            moves.update(aux)
+            for item in automaton.transitions[state][symbol]:
+            # aux = automaton.transitions[state][symbol]
+                moves.add(item)
         except KeyError:
             pass
     return moves
 
+#KIKE
+# def epsilon_closure(automaton, states):
+#     pending = [ s for s in states ] # equivalente a list(states) pero me gusta así :p
+#     closure = { s for s in states } # equivalente a  set(states) pero me gusta así :p
+
+#     while pending:
+#         state = pending.pop()
+#         aux = automaton.epsilon_transitions(state)
+#         for item in aux:
+#             if item not in pending:
+#                 pending.append(item)
+#                 pass
+#         closure.update(aux)
+
+#     return ContainerSet(*closure)
+
 def epsilon_closure(automaton, states):
     pending = [ s for s in states ] # equivalente a list(states) pero me gusta así :p
     closure = { s for s in states } # equivalente a  set(states) pero me gusta así :p
-
+    
     while pending:
         state = pending.pop()
-        aux = automaton.epsilon_transitions(state)
-        for item in aux:
-            if item not in pending:
-                pending.append(item)
-        closure.update(aux)
 
+        l = move(automaton, [state], '')
+        for i in l:
+            if(i in closure):
+                pass
+            else:
+                closure.add(i)
+                pending.append(i)
+                
     return ContainerSet(*closure)
 
 
@@ -315,7 +426,7 @@ def automata_concatenation(a1, a2):
             transitions[i + d1, ''] = [a2.start + d2]
     for i in a2.finals:
         try:
-            transitions[i + d2, ''].add(final)
+            transitions[i + d2, ''].append(final)
         except KeyError:
             transitions[i + d2, ''] = [final]
 
@@ -343,6 +454,11 @@ def automata_closure(a1):
             transitions[i + d1, ''].add(final)
         except KeyError:
             transitions[i + d1, ''] = [final]
+
+    try:
+        transitions[final, ''].add(start)
+    except:
+        transitions[final,''] = [start]
 
     states = a1.states +  2
     finals = { final }
@@ -432,66 +548,3 @@ def automata_minimization(automaton):
 
     return DFA(len(states), finals, transitions, start)
 
-
-
-class Node:
-    def evaluate(self):
-        raise NotImplementedError()
-
-class AtomicNode(Node):
-    def __init__(self, lex):
-        self.lex = lex
-
-class UnaryNode(Node):
-    def __init__(self, node):
-        self.node = node
-
-    def evaluate(self):
-        value = self.node.evaluate()
-        return self.operate(value)
-
-    @staticmethod
-    def operate(value):
-        raise NotImplementedError()
-
-class BinaryNode(Node):
-    def __init__(self, left, right):
-        self.left = left
-        self.right = right
-
-    def evaluate(self):
-        lvalue = self.left.evaluate()
-        rvalue = self.right.evaluate()
-        return self.operate(lvalue, rvalue)
-
-    @staticmethod
-    def operate(lvalue, rvalue):
-        raise NotImplementedError()
-
-
-class EpsilonNode(AtomicNode):
-    def evaluate(self):
-        return NFA(1, [0], {})
-
-
-class SymbolNode(AtomicNode):
-    def evaluate(self):
-        s = self.lex
-        return NFA(2, [1], {(0, s) : [1],})
-
-
-class ClosureNode(UnaryNode):
-    @staticmethod
-    def operate(value):
-        return automata_closure(value)
-
-class UnionNode(BinaryNode):
-    @staticmethod
-    def operate(lvalue, rvalue):
-        return automata_union(lvalue, rvalue)
-
-
-class ConcatNode(BinaryNode):
-    @staticmethod
-    def operate(lvalue, rvalue):
-        return automata_concatenation(lvalue, rvalue)
