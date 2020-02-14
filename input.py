@@ -15,8 +15,6 @@ class Context:
         self.NTerminals = {}
         self.Productions = {}
 
-GI = Context()
-
 G = Grammar()
 E = G.NonTerminal('E', True)
 W, D, N, T, PN, XN, PT, XT, R, O, Z, Y = G.NonTerminals('W D N T PN XN PT XT R O Z Y')
@@ -68,29 +66,26 @@ lexer = Lexer([
     (id, f'({letters})({letters}|0|{nonzero_digits})*'),
                ], G.EOF)
 
-text = '''
-Distinguido = <e, 'e'>
-NoTerminales = [<x, 'x'>, <y, 'y'>, <z, 'z'>]
-Terminales = [<a, 'b'>, <c, 'd'>]
-x = y + z + a
-y = a + z; a + c
-z = c
-'''
-# print(f'\n>>> Tokenizando: "{text}"')
-tokens = lexer(text)
-print('tokens', tokens)
-tokens_filtrado = []
-for i in tokens:
-    if i.token_type != 'salto' and i.token_type != 'space':
-        tokens_filtrado.append(i)
-print('tokens filtrados', tokens_filtrado)
+class GrammarFromInput:
+    def __init__(self, input):
+        self.input = input
+        GI = Context()
+        tokens = lexer(input)
+        # print('tokens', tokens)
+        tokens_filtrado = []
+        for i in tokens:
+            if i.token_type != 'salto' and i.token_type != 'space':
+                tokens_filtrado.append(i)
+        # print('tokens filtrados', tokens_filtrado)
 
+        parser = metodo_predictivo_no_recursivo(G)
+        printer = get_printer(AtomicNode=AtomicNode, UnaryNode=UnaryNode, BinaryNode=BinaryNode)
 
-
-parser = metodo_predictivo_no_recursivo(G)
-printer = get_printer(AtomicNode=AtomicNode, UnaryNode=UnaryNode, BinaryNode=BinaryNode)
-
-left_parse = parser(tokens_filtrado)
-ast = evaluate_parse(left_parse, tokens_filtrado)
-ast.evaluate(GI)
-print(GI.Grammar)
+        left_parse = parser(tokens_filtrado)
+        ast = evaluate_parse(left_parse, tokens_filtrado)
+        ast.evaluate(GI)
+        # print(GI.Grammar)
+        self.grammar = GI.Grammar
+    
+    def GiveGrammar(self):
+        return self.grammar
