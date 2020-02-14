@@ -1,5 +1,5 @@
 from cmp.tools import Node
-from cmp.pycompiler import Production
+from cmp.pycompiler import Production, Sentence
 
 class MultiNodeGrammar(Node):
     def __init__(self, lis):
@@ -79,8 +79,8 @@ class ProductionNodeGrammar(Node):
 
         b = context.Terminals[str(self.der)] if str(self.der) in context.Terminals else context.NTerminals[str(self.der)]
 
-        context.Productions[context.NTerminals[str(self.izq)]] = Production(context.NTerminals[str(self.izq)], b)
-        context.NTerminals[str(self.izq)].Grammar.Add_Production(Production(context.NTerminals[str(self.izq)], b))
+        context.Productions[context.NTerminals[str(self.izq)]] = Production(context.NTerminals[str(self.izq)], Sentence(b))
+        context.NTerminals[str(self.izq)].Grammar.Add_Production(Production(context.NTerminals[str(self.izq)], Sentence(b)))
 
 class SentencesNodeGrammar(Node):
     def __init__(self, izq, der):
