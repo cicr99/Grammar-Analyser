@@ -5,36 +5,46 @@ from cmp.tools import evaluate_parse
 from cmp.tools import metodo_predictivo_no_recursivo
 from cmp.tools import get_printer
 from cmp.tools import Node, AtomicNode, UnaryNode, BinaryNode
+from cmp.input_tools import MultiNodeGrammar, DisNodeGrammar, UnaryNodeGrammar, TerminalNodeGrammar, NonTerminalNodeGrammar, EpsilonNodeGrammar, ProductionNodeGrammar, SentenceNodeGrammar, SentencesNodeGrammar
 
 
-GI = Grammar()
+class Context:
+    def __init__(self):
+        self.Grammar = Grammar()
+        self.Terminals = {}
+        self.NTerminals = {}
+        self.Productions = {}
 
+GI = Context()
 
 G = Grammar()
-
 E = G.NonTerminal('E', True)
-W, D, N, T, P, X, R, O, Z, Y = G.NonTerminals('W D N T P X R O Z Y')
+W, D, N, T, PN, XN, PT, XT, R, O, Z, Y = G.NonTerminals('W D N T PN XN PT XT R O Z Y')
 num, distinguido, terminal, nterminal, coma, pcoma, equal, plus, lcor, rcor, lpar, rpar, comilla, id, epsilon = G.Terminals('num distinguido terminal nterminal , ; = + [ ] < > \' id ε')
 
 # > PRODUCTIONS
-E %= D + N + T + R + W, lambda h, s: 
-W %= R + W, None
-W %= G.Epsilon, None
+E %= D + N + T + R + W, lambda h, s: MultiNodeGrammar([s[1], s[2], s[3], s[4], s[5]])
+W %= R + W, lambda h, s: MultiNodeGrammar([s[1], s[2]])
+W %= G.Epsilon, lambda h, s: EpsilonNodeGrammar()
 
-D %= distinguido + equal + id, lambda h, s: GI.NonTerminal(str(id), True)
-N %= nterminal + equal + lcor + P + X + rcor, None
-T %= terminal + equal + lcor + P + X + rcor, None
+D %= distinguido + equal + lpar + id + coma + comilla + id + comilla + rpar, lambda h, s: DisNodeGrammar(str(s[4]), str(s[7]))
+N %= nterminal + equal + lcor + PN + XN + rcor, lambda h, s: MultiNodeGrammar([s[4], s[5]])
+T %= terminal + equal + lcor + PT + XT + rcor, lambda h, s: MultiNodeGrammar([s[4], s[5]])
 
-P %= lpar + id + coma + comilla + id + comilla + rpar, None
-X %= coma + P + X, None
-X %= G.Epsilon, None
+PN %= lpar + id + coma + comilla + id + comilla + rpar, lambda h, s: NonTerminalNodeGrammar(str(s[2]), str(s[5]))
+XN %= coma + PN + XN, lambda h, s: MultiNodeGrammar([s[2], s[3]])
+XN %= G.Epsilon, lambda h, s: EpsilonNodeGrammar()
 
-R %= id + equal + O + Y, None
-O %= id + Z, None
-Z %= plus + id + Z, None
-Z %= G.Epsilon, None
-Y %= pcoma + O + Y, None
-Y %= G.Epsilon, None
+PT %= lpar + id + coma + comilla + id + comilla + rpar, lambda h, s: TerminalNodeGrammar(str(s[2]), str(s[5]))
+XT %= coma + PT + XT, lambda h, s: MultiNodeGrammar([s[2], s[3]])
+XT %= G.Epsilon, lambda h, s: EpsilonNodeGrammar()
+
+R %= id + equal + O + Y, lambda h, s: ProductionNodeGrammar(str(s[1]), s[4]), None, None, None, lambda h, s: s[3]
+O %= id + Z, lambda h, s: s[2], None, lambda h, s: s[1]
+Z %= plus + id + Z, lambda h, s: s[3], None, None, lambda h, s: SentenceNodeGrammar(h[0], s[2])   
+Z %= G.Epsilon, lambda h, s: h[0]
+Y %= pcoma + O + Y, lambda h, s: s[3], None, None, lambda h, s: SentencesNodeGrammar(h[0], s[2])
+Y %= G.Epsilon, lambda h, s: h[0]
 
 nonzero_digits = '|'.join(str(n) for n in range(1,10))
 letters = '|'.join(chr(n) for n in range(ord('a'),ord('z')+1))
@@ -59,22 +69,21 @@ lexer = Lexer([
                ], G.EOF)
 
 text = '''
-Distinguido = e
+Distinguido = <e, 'e'>
 NoTerminales = [<x, 'x'>, <y, 'y'>, <z, 'z'>]
 Terminales = [<a, 'b'>, <c, 'd'>]
-x = y + z
-y = a + b
-y = b
-z = d
+x = y + z + a
+y = a + z; a + c
+z = c
 '''
 # print(f'\n>>> Tokenizando: "{text}"')
 tokens = lexer(text)
-# print('tokens', tokens)
+print('tokens', tokens)
 tokens_filtrado = []
 for i in tokens:
     if i.token_type != 'salto' and i.token_type != 'space':
         tokens_filtrado.append(i)
-# print('tokens filtrados', tokens_filtrado)
+print('tokens filtrados', tokens_filtrado)
 
 
 
@@ -83,4 +92,5 @@ printer = get_printer(AtomicNode=AtomicNode, UnaryNode=UnaryNode, BinaryNode=Bin
 
 left_parse = parser(tokens_filtrado)
 ast = evaluate_parse(left_parse, tokens_filtrado)
-print(printer(ast))
+ast.evaluate(GI)
+print(GI.Grammar)
