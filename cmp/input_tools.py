@@ -7,7 +7,7 @@ class MultiNodeGrammar(Node):
     
     def evaluate(self, context):
         for i in self.lis:
-            print(i)
+            # print(i)
             i.evaluate(context)
 
 class EpsilonNodeGrammar(Node):
@@ -78,6 +78,7 @@ class ProductionNodeGrammar(Node):
             return
 
         b = context.Terminals[str(self.der)] if str(self.der) in context.Terminals else context.NTerminals[str(self.der)]
+        # print(b)
 
         context.Productions[context.NTerminals[str(self.izq)]] = Production(context.NTerminals[str(self.izq)], Sentence(b))
         context.NTerminals[str(self.izq)].Grammar.Add_Production(Production(context.NTerminals[str(self.izq)], Sentence(b)))
@@ -89,13 +90,19 @@ class SentencesNodeGrammar(Node):
 
     def evaluate(self, context):
         ret = []
+        if not isinstance(self.der, SentenceNodeGrammar):
+            der = context.Terminals[str(self.der)] if str(self.der) in context.Terminals else context.NTerminals[str(self.der)]
+            self.der = Sentence(der)
         if isinstance(self.izq, SentenceNodeGrammar):
             return [self.izq, self.der]
-        temp = self.izq.evaluate(context)
-        for i in temp:
-            ret.append(i)
-        ret.append(self.der)
-        return ret
+        elif isinstance(self.izq, SentencesNodeGrammar):
+            temp = self.izq.evaluate(context)
+            for i in temp:
+                ret.append(i)
+            ret.append(self.der)
+            return ret
+        b = context.Terminals[str(self.izq)] if str(self.izq) in context.Terminals else context.NTerminals[str(self.izq)]
+        return [Sentence(b)]
 
 class SentenceNodeGrammar(Node):
     def __init__(self, izq, der):
