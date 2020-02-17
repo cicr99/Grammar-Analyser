@@ -28,7 +28,7 @@ class AutomataToRegex:
 
 
     def GetRegex(self):
-        pprint(self.gnfa.transitions) 
+        # pprint(self.gnfa.transitions) 
         for q in range(1, self.gnfa.states - 1):
             for i in range(self.gnfa.states - 1):
                 if i not in self.gnfa.transitions or i == q:
@@ -38,11 +38,11 @@ class AutomataToRegex:
                 # temp.update(self.gnfa.transitions[i])
                 
                 # pprint(self.gnfa.transitions)
-                print(q, i)
+                # print(q, i)
                 regex_from_q_to_q = self._regex_from_q_to_q(q)
-                print('q->q', regex_from_q_to_q.regular_exp)
+                # print('q->q', regex_from_q_to_q.regular_exp)
                 regex_to_q = self._regex_to_q(i, q)
-                print('i->q', regex_to_q.regular_exp)
+                # print('i->q', regex_to_q.regular_exp)
 
                 temp = {}
                 for key, values in self.gnfa.transitions[i].items():
@@ -52,27 +52,40 @@ class AutomataToRegex:
                     if regex_to_q.regular_exp == '~':
                         continue
                     for j in states:
-                        print(states)
+                        # print(states)
                         if j == self.gnfa.start:
                             continue
-                        print(j)
+                        # print(j)
                         regex_from_q = self._regex_from_q(j, q)
                         if regex_from_q.regular_exp == '~':
                             continue
-                        print('q->j', regex_from_q.regular_exp)
+                        # print('q->j', regex_from_q.regular_exp)
                         exp = ''
                         if regex_to_q.regular_exp != '~':
-                            exp += '(' + regex_to_q.regular_exp + ')'
+                            if(len(regex_to_q.regular_exp) > 1):
+                                exp += '(' + regex_to_q.regular_exp + ')'
+                            else:
+                                exp += regex_to_q.regular_exp
                         if regex_from_q_to_q.regular_exp != '~':
                             exp += '(' + regex_from_q_to_q.regular_exp + ')*'
                         if regex_from_q.regular_exp != '~':
-                            exp += '(' + regex_from_q.regular_exp + ')'
+                            if len(regex_from_q.regular_exp) > 1:
+                                exp += '(' + regex_from_q.regular_exp + ')'
+                            else:
+                                exp += regex_from_q.regular_exp
                         exp_res = regex.regular_exp
                         if exp != '':
-                            exp_res = exp
+                            # exp_res = exp
+                            if len(exp) > 1:
+                                exp = '(' + exp + ')'
                             if regex.regular_exp != '~':
-                                exp_res = '(' + regex.regular_exp + ')' + '|' + exp
-                        print('resultado', exp_res)
+                                if len(regex.regular_exp) > 1:
+                                    exp_res = exp + '|' + '(' + regex.regular_exp + ')'
+                                else:
+                                    exp_res = exp + '|' + regex.regular_exp
+                            else:
+                                exp_res = exp
+                        # print('resultado', exp_res)
                         temp[regex].remove(j)
                         if len(temp[regex]) == 0:
                             del temp[regex]
@@ -84,6 +97,10 @@ class AutomataToRegex:
 
                 self.gnfa.transitions[i] = temp
             del self.gnfa.transitions[q]
-            self.gnfa._repr_png_().write_png(f'{q}.png')
-            print(self.gnfa.transitions)
-        return list(self.gnfa.transitions[0].items())[0]
+            # self.gnfa._repr_png_().write_png(f'{q}.png')
+            # print(self.gnfa.transitions)
+
+        for key, value in self.gnfa.transitions[0].items():
+            if len(value) > 0:
+                return key
+        # return list(self.gnfa.transitions[0].items())[0]
