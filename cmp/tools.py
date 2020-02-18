@@ -2,6 +2,7 @@ from cmp.utils import *
 from itertools import islice
 from cmp.nfa_dfa import *
 from cmp.automata import *
+from cmp.pycompiler import *
 import cmp.visitor as visitor
 
 class Node:
@@ -220,7 +221,6 @@ def metodo_predictivo_no_recursivo(G, M = None):
 
 
 def get_printer(AtomicNode=AtomicNode, UnaryNode=UnaryNode, BinaryNode=BinaryNode, ):
-    
     class PrintVisitor(object):
         @visitor.on('node')
         def visit(self, node, tabs):
@@ -245,7 +245,7 @@ def get_printer(AtomicNode=AtomicNode, UnaryNode=UnaryNode, BinaryNode=BinaryNod
 
     printer = PrintVisitor()
     return (lambda ast: printer.visit(ast))
-    
+
 
 def evaluate_parse(left_parse, tokens):
     if not left_parse or not tokens:
@@ -550,3 +550,117 @@ def automata_minimization(automaton):
 
     return DFA(len(states), finals, transitions, start)
 
+
+
+
+
+def remove_useless_productions(G):
+    flag = [False] * len(G.nonTerminals)
+    mp = {}
+
+    for i, nt in enumerate(G.nonTerminals):
+        mp[nt] = i
+
+    def dfs(S):
+        flag[mp[S]] = True
+        for prod in S.productions:
+            _, right = prod
+            for symbol in right:
+                if isinstance(symbol, NonTerminal) and not flag[mp[symbol]]:
+                    dfs(symbol)
+
+    dfs(G.startSymbol)
+    nt = G.nonTerminals.copy()
+    G.nonTerminals = []
+    G.Productions = []
+
+    for item in nt:
+        if flag[mp[item]]:
+            G.nonTerminals.append(item)
+            G.Productions.extend(item.productions)
+
+
+
+
+
+
+
+
+
+
+
+
+def remove_immediate_recursion(G):
+    G.Productions = []
+
+    non_terminals = G.nonTerminals.copy()
+    for item in non_terminals:
+        bad_prod = [Sentence(*prod.Right[1:]) for prod in item.productions if len(prod.Right) > 0 and prod.Right[0] == item]
+        good_prod = [Sentence(*prod.Right) for prod in item.productions if len(prod.Right) == 0 or prod.Right[0] != item]
+
+        if len(bad_prod) > 0:
+            nsymbol = G.NonTerminal(item.Name + '_0')
+            item.productions = []
+
+            for prod in good_prod:
+                item %= prod + nsymbol
+
+            for prod in bad_prod:
+                nsymbol %= prod + nsymbol
+
+            nsymbol %= G.Epsilon
+
+        else:
+            G.Productions.extend(item.productions)
+
+
+
+
+
+
+def grammar_from_input(input):
+    terminals, nonTerminals, productions = [], [], []
+
+    input = input.split('\n')
+    lines = [l for l in input if l != '']
+
+    l = lines[0].split()
+    start_symbol = l[-1]
+    nonTerminals.append(start_symbol)
+
+    l = lines[1].replace(',', ' ').split()
+    if len(l) > 4:
+        for i in range(3, len(l) - 1):
+            nonTerminals.append(l[i])
+
+    l = lines[2].replace(',', ' ').split()
+    if len(l) > 4:
+        for i in range(3, len(l) - 1):
+            terminals.append(l[i])
+    else:
+        raise Exception('Invalid sentence')
+
+    lines = lines[3:]
+    for prod in lines:
+        right, sentences = prod.split('=')
+        right, = right.split()
+
+        sentences = sentences.split(';')
+        for s in sentences:
+            s = s.replace('+', ' ').split()
+            productions.append({'Head': right, 'Body': list(s)})
+
+    d = dict()
+    d['NonTerminals'] = nonTerminals
+    d['Terminals'] = terminals
+    d['Productions'] = productions
+
+    G = Grammar.from_json(json.dumps(d))
+
+    if G.startSymbol is None:
+        for nt in G.nonTerminals:
+            if nt.Name == start_symbol:
+                G.startSymbol = nt
+                break
+
+    return G

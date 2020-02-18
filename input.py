@@ -30,6 +30,7 @@ N %= nterminal + equal + lcor + PN + XN + rcor, lambda h, s: MultiNodeGrammar([s
 T %= terminal + equal + lcor + PT + XT + rcor, lambda h, s: MultiNodeGrammar([s[4], s[5]])
 
 PN %= lpar + id + coma + comilla + id + comilla + rpar, lambda h, s: NonTerminalNodeGrammar(str(s[2]), str(s[5]))
+PN %= G.Epsilon, lambda h, s: EpsilonNodeGrammar()
 XN %= coma + PN + XN, lambda h, s: MultiNodeGrammar([s[2], s[3]])
 XN %= G.Epsilon, lambda h, s: EpsilonNodeGrammar()
 
@@ -39,13 +40,15 @@ XT %= G.Epsilon, lambda h, s: EpsilonNodeGrammar()
 
 R %= id + equal + O + Y, lambda h, s: ProductionNodeGrammar(str(s[1]), s[4]), None, None, None, lambda h, s: s[3]
 O %= id + Z, lambda h, s: s[2], None, lambda h, s: s[1]
-Z %= plus + id + Z, lambda h, s: s[3], None, None, lambda h, s: SentenceNodeGrammar(h[0], s[2])   
+Z %= plus + id + Z, lambda h, s: s[3], None, None, lambda h, s: SentenceNodeGrammar(h[0], s[2])
 Z %= G.Epsilon, lambda h, s: h[0]
 Y %= pcoma + O + Y, lambda h, s: s[3], None, None, lambda h, s: SentencesNodeGrammar(h[0], s[2])
 Y %= G.Epsilon, lambda h, s: h[0]
 
 nonzero_digits = '|'.join(str(n) for n in range(1,10))
-letters = '|'.join(chr(n) for n in range(ord('a'),ord('z')+1))
+alp = [chr(n) for n in range(ord('a'),ord('z') + 1)]
+alp.extend([chr(n) for n in range(ord('A'),ord('Z') + 1)])
+letters = '|'.join(alp)
 
 lexer = Lexer([
     (num, f'({nonzero_digits})(0|{nonzero_digits})*'),
@@ -86,6 +89,6 @@ class GrammarFromInput:
         ast.evaluate(GI)
         # print(GI.Grammar)
         self.grammar = GI.Grammar
-    
+
     def GiveGrammar(self):
         return self.grammar
