@@ -4,32 +4,15 @@ from pprint import pprint
 import streamlit as st
 
 
-# text = '''
-# Distinguido = <e, 'e'>
-# NoTerminales = [<x, 'x'>, <y, 'y'>, <z, 'z'>]
-# Terminales = [<a, 'b'>, <c, 'd'>]
-# e = x
-# x = y + z + a
-# y = a + z; a + c
-# z = c
-# '''
-
-# text = '''
-# Distinguido = <e, 'e'>
-# NoTerminales = []
-# Terminales = [<a, 'b'>, <c, 'd'>]
-# e = e + a; c
-# '''
-
 text = '''
-Distinguido = E
-NoTerminales = [ S ]
-Terminales = [ a, b ]
-
-E = S + a
-S = b + S ; epsilon
+Distinguido = S
+NoTerminales = [ A, B, C ]
+Terminales = [ a, b, c, d ]
+S = a + b + S ; a + b + A ; a + b + B
+A = a + d
+B = a + B
+C = d + c
 '''
-
 
 
 def main():
@@ -45,9 +28,7 @@ def main():
         G = grammar_from_input(text)
         #G = GrammarFromInput(text).GiveGrammar()
         st.write(G)
-        remove_useless_productions(G)
-        st.write(G)
-        remove_immediate_recursion(G)
+        simplifying_grammar(G)
         st.write(G)
 
         # firsts = compute_firsts(G)
@@ -59,14 +40,15 @@ def main():
 
 
 def main2():
-    G = GrammarFromInput(text).GiveGrammar()
-    remove_immediate_recursion(G)
-    pprint(G)
+    G = grammar_from_input(text)
+    print(G)
+    simplifying_grammar(G)
+    print(G)
 
 
 
 if __name__ == '__main__':
-    main()
+    main2()
 
 
 

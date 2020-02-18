@@ -552,20 +552,49 @@ def automata_minimization(automaton):
 
 
 
+def remove_non_terminating_productions(G):
+    terminals = set(G.terminals)
+
+    change = True
+    while change:
+        change = False
+        for prod in G.Productions:
+            if prod.Left not in terminals and all([s in terminals for s in prod.Right]):
+                terminals.add(prod.Left)
+                change = True
+
+    nt = G.nonTerminals.copy()
+    G.nonTerminals = []
+    G.Productions = []
+
+    for s in nt:
+        if s in terminals:
+            G.nonTerminals.append(s)
+            productions = s.productions.copy()
+            s.productions = []
+            for prod in productions:
+                if all([item in terminals for item in prod.Right]):
+                    G.Productions.append(prod)
+                    s.productions.append(prod)
 
 
 def remove_useless_productions(G):
-    flag = [False] * len(G.nonTerminals)
+    flag = [False] * (len(G.nonTerminals) + len(G.terminals))
     mp = {}
 
     for i, nt in enumerate(G.nonTerminals):
         mp[nt] = i
+    sz = len(G.nonTerminals)
+    for i, t in enumerate(G.terminals):
+        mp[t] = i + sz
 
     def dfs(S):
         flag[mp[S]] = True
         for prod in S.productions:
             _, right = prod
             for symbol in right:
+                if isinstance(symbol, Terminal):
+                    flag[mp[symbol]] = True
                 if isinstance(symbol, NonTerminal) and not flag[mp[symbol]]:
                     dfs(symbol)
 
@@ -579,7 +608,28 @@ def remove_useless_productions(G):
             G.nonTerminals.append(item)
             G.Productions.extend(item.productions)
 
+    t = G.terminals.copy()
+    G.terminals = []
+    for item in t:
+        if flag[mp[item]]:
+            G.terminals.append(item)
 
+
+
+
+# def remove_null_productions(G):
+#     null_prod = set()
+
+#     change = True
+#     while change:
+#         change = False
+#         sz = len(null_prod)
+#         for prod in G.Productions:
+#             if prod.Left not in null_prod and all([s in null_prod for s in prod.Right]):
+#                 null_prod.add(prod.Left)
+#                 change = True
+#     if G.startSymbol in null_prod:
+#         return
 
 
 
@@ -664,3 +714,8 @@ def grammar_from_input(input):
                 break
 
     return G
+
+
+def simplifying_grammar(G):
+    remove_non_terminating_productions(G)
+    remove_useless_productions(G)
