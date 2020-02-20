@@ -281,22 +281,6 @@ def move(automaton, states, symbol):
             pass
     return moves
 
-#KIKE
-# def epsilon_closure(automaton, states):
-#     pending = [ s for s in states ] # equivalente a list(states) pero me gusta así :p
-#     closure = { s for s in states } # equivalente a  set(states) pero me gusta así :p
-
-#     while pending:
-#         state = pending.pop()
-#         aux = automaton.epsilon_transitions(state)
-#         for item in aux:
-#             if item not in pending:
-#                 pending.append(item)
-#                 pass
-#         closure.update(aux)
-
-#     return ContainerSet(*closure)
-
 def epsilon_closure(automaton, states):
     pending = [ s for s in states ] # equivalente a list(states) pero me gusta así :p
     closure = { s for s in states } # equivalente a  set(states) pero me gusta así :p
@@ -588,9 +572,6 @@ def remove_useless_productions(G):
         if flag[mp[item]]:
             G.terminals.append(item)
 
-
-
-
 def remove_null_productions(G):
     null_prod = set()
 
@@ -605,16 +586,18 @@ def remove_null_productions(G):
         return
 
     def add_prod(head, body, i, prod):
-        if i == len(body) and len(prod) > 0:
-            print(prod)
-            newProd = Production(head, Sentence(prod))
-            G.Productions.append(newProd)
-            head.productions.append(newProd)
+        if i == len(body):
+            if len(prod) > 0:
+                sentence = G.Epsilon
+                for s in prod:
+                    sentence += s
+                head %= sentence
             return
 
         if body[i] not in null_prod:
             prod.append(body[i])
             add_prod(head, body, i + 1, prod)
+            prod.pop()
         else:
             add_prod(head, body, i + 1, prod)
             prod.append(body[i])
@@ -626,12 +609,10 @@ def remove_null_productions(G):
         nt_prod = nt.productions.copy()
         nt.productions = []
         for prod in nt_prod:
-            head, body = prod
+            head, body = prod.Left, prod.Right
             if any([s in null_prod for s in body]):
                 production = []
                 add_prod(head, body, 0, production)
-
-
 
 def remove_immediate_recursion(G):
     G.Productions = []
@@ -704,6 +685,6 @@ def grammar_from_input(input):
     return G
 
 def simplifying_grammar(G):
+    remove_null_productions(G)
     # remove_non_terminating_productions(G)
     # remove_useless_productions(G)
-    remove_null_productions(G)

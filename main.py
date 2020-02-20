@@ -48,6 +48,11 @@ def main():
         # M = build_parsing_table(G, firsts, follows)
 
         # st.dataframe(M)
+        nfa = GrammarToAutomata(G).CalculateRegularNFA()
+        nfa._repr_png_().write_png('nfa.png')
+        gnfa = AutomataToRegex(nfa).GetGNFA()
+        gnfa._repr_png_().write_png('gnfa.png')
+        print(AutomataToRegex(nfa).GetRegex())
 
 
 
@@ -62,11 +67,6 @@ def main2():
 if __name__ == '__main__':
     main2()
 
-        nfa = GrammarToAutomata(G).CalculateRegularNFA()
-        nfa._repr_png_().write_png('nfa.png')
-        gnfa = AutomataToRegex(nfa).GetGNFA()
-        gnfa._repr_png_().write_png('gnfa.png')
-        print(AutomataToRegex(nfa).GetRegex())
 
 
 
