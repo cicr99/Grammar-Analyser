@@ -2,6 +2,9 @@ from input import GrammarFromInput
 from cmp.tools import *
 from pprint import pprint
 import streamlit as st
+from cmp.grammar_to_automata import GrammarToAutomata
+from cmp.automata_to_regex import AutomataToRegex
+from pprint import pprint
 
 
 # text = '''
@@ -31,7 +34,7 @@ def main():
     Carmen Irene Cabrera Rodríguez  
     Enrique Martínez González''')
 
-    text = st.text_area('Input your grammar here:')
+    # text = st.text_area('Input your grammar here:')
 
     if text:
         G = grammar_from_input(text)
@@ -58,6 +61,12 @@ def main2():
 
 if __name__ == '__main__':
     main2()
+
+        nfa = GrammarToAutomata(G).CalculateRegularNFA()
+        nfa._repr_png_().write_png('nfa.png')
+        gnfa = AutomataToRegex(nfa).GetGNFA()
+        gnfa._repr_png_().write_png('gnfa.png')
+        print(AutomataToRegex(nfa).GetRegex())
 
 
 
