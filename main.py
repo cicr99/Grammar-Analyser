@@ -4,16 +4,25 @@ from pprint import pprint
 import streamlit as st
 
 
+# text = '''
+# Distinguido = S
+# NoTerminales = [ A, B, C ]
+# Terminales = [ a, b, c, d ]
+# S = a + b + S ; a + b + A ; a + b + B
+# A = a + d
+# B = a + B
+# C = d + c
+# '''
+
 text = '''
 Distinguido = S
 NoTerminales = [ A, B, C ]
-Terminales = [ a, b, c, d ]
-S = a + b + S ; a + b + A ; a + b + B
-A = a + d
-B = a + B
-C = d + c
+Terminales = [ b, c, d ]
+S = A + B + C + d
+A = B + C
+B = b + B; epsilon
+C = c + C; epsilon
 '''
-
 
 def main():
     st.title('Grammar Analyser')

@@ -39,17 +39,14 @@ class BinaryNode(Node):
     def operate(lvalue, rvalue):
         raise NotImplementedError()
 
-
 class EpsilonNode(AtomicNode):
     def evaluate(self):
         return NFA(1, [0], {})
-
 
 class SymbolNode(AtomicNode):
     def evaluate(self):
         s = self.lex
         return NFA(2, [1], {(0, s) : [1],})
-
 
 class ClosureNode(UnaryNode):
     @staticmethod
@@ -61,11 +58,12 @@ class UnionNode(BinaryNode):
     def operate(lvalue, rvalue):
         return automata_union(lvalue, rvalue)
 
-
 class ConcatNode(BinaryNode):
     @staticmethod
     def operate(lvalue, rvalue):
         return automata_concatenation(lvalue, rvalue)
+
+
 
 def compute_local_first(firsts, alpha):
     first_alpha = ContainerSet()
@@ -87,8 +85,6 @@ def compute_local_first(firsts, alpha):
             first_alpha.set_epsilon()
 
     return first_alpha
-
-
 
 def compute_firsts(G):
     firsts = {}
@@ -121,7 +117,6 @@ def compute_firsts(G):
 
     return firsts
 
-
 def compute_follows(G, firsts):
     follows = { }
     change = True
@@ -153,8 +148,6 @@ def compute_follows(G, firsts):
 
     return follows
 
-
-
 def build_parsing_table(G, firsts, follows):
     M = {}
 
@@ -170,8 +163,6 @@ def build_parsing_table(G, firsts, follows):
                 M[X, t] = [production, ]
 
     return M
-
-
 
 def deprecated_metodo_predictivo_no_recursivo(G, M=None, firsts=None, follows=None):
 
@@ -211,14 +202,11 @@ def deprecated_metodo_predictivo_no_recursivo(G, M=None, firsts=None, follows=No
 
     return parser
 
-
 def metodo_predictivo_no_recursivo(G, M = None):
     parser = deprecated_metodo_predictivo_no_recursivo(G, M)
     def updated(tokens):
         return parser([t.token_type for t in tokens])
     return updated
-
-
 
 def get_printer(AtomicNode=AtomicNode, UnaryNode=UnaryNode, BinaryNode=BinaryNode, ):
     class PrintVisitor(object):
@@ -246,7 +234,6 @@ def get_printer(AtomicNode=AtomicNode, UnaryNode=UnaryNode, BinaryNode=BinaryNod
     printer = PrintVisitor()
     return (lambda ast: printer.visit(ast))
 
-
 def evaluate_parse(left_parse, tokens):
     if not left_parse or not tokens:
         return
@@ -257,7 +244,6 @@ def evaluate_parse(left_parse, tokens):
 
     assert isinstance(next(tokens).token_type, EOF)
     return result
-
 
 def evaluate(production, left_parse, tokens, inherited_value=None):
     head, body = production
@@ -283,7 +269,6 @@ def evaluate(production, left_parse, tokens, inherited_value=None):
     if attr is None:
         return None
     return attr(inherited, synteticed)
-
 
 def move(automaton, states, symbol):
     moves = set()
@@ -315,7 +300,7 @@ def move(automaton, states, symbol):
 def epsilon_closure(automaton, states):
     pending = [ s for s in states ] # equivalente a list(states) pero me gusta así :p
     closure = { s for s in states } # equivalente a  set(states) pero me gusta así :p
-    
+
     while pending:
         state = pending.pop()
 
@@ -326,9 +311,8 @@ def epsilon_closure(automaton, states):
             else:
                 closure.add(i)
                 pending.append(i)
-                
-    return ContainerSet(*closure)
 
+    return ContainerSet(*closure)
 
 def nfa_to_dfa(automaton):
     transitions = {}
@@ -403,7 +387,6 @@ def automata_union(a1, a2):
 
     return NFA(states, finals, transitions, start)
 
-
 def automata_concatenation(a1, a2):
     transitions = {}
 
@@ -437,7 +420,6 @@ def automata_concatenation(a1, a2):
 
     return NFA(states, finals, transitions, start)
 
-
 def automata_closure(a1):
     transitions = {}
 
@@ -466,7 +448,6 @@ def automata_closure(a1):
     finals = { final }
 
     return NFA(states, finals, transitions, start)
-
 
 def distinguish_states(group, automaton, partition):
     split = {}
@@ -498,8 +479,6 @@ def distinguish_states(group, automaton, partition):
 
     return [ group for group in split.values()]
 
-
-
 def state_minimization(automaton):
     partition = DisjointSet(*range(automaton.states))
 
@@ -525,8 +504,6 @@ def state_minimization(automaton):
 
     return partition
 
-
-
 def automata_minimization(automaton):
     partition = state_minimization(automaton)
 
@@ -549,8 +526,6 @@ def automata_minimization(automaton):
     finals = set([i for i in range(len(states)) if states[i].value in automaton.finals])
 
     return DFA(len(states), finals, transitions, start)
-
-
 
 def remove_non_terminating_productions(G):
     terminals = set(G.terminals)
@@ -576,7 +551,6 @@ def remove_non_terminating_productions(G):
                 if all([item in terminals for item in prod.Right]):
                     G.Productions.append(prod)
                     s.productions.append(prod)
-
 
 def remove_useless_productions(G):
     flag = [False] * (len(G.nonTerminals) + len(G.terminals))
@@ -617,26 +591,45 @@ def remove_useless_productions(G):
 
 
 
-# def remove_null_productions(G):
-#     null_prod = set()
+def remove_null_productions(G):
+    null_prod = set()
 
-#     change = True
-#     while change:
-#         change = False
-#         sz = len(null_prod)
-#         for prod in G.Productions:
-#             if prod.Left not in null_prod and all([s in null_prod for s in prod.Right]):
-#                 null_prod.add(prod.Left)
-#                 change = True
-#     if G.startSymbol in null_prod:
-#         return
+    change = True
+    while change:
+        change = False
+        for prod in G.Productions:
+            if prod.Left not in null_prod and all([s in null_prod for s in prod.Right]):
+                null_prod.add(prod.Left)
+                change = True
+    if G.startSymbol in null_prod:
+        return
 
+    def add_prod(head, body, i, prod):
+        if i == len(body) and len(prod) > 0:
+            print(prod)
+            newProd = Production(head, Sentence(prod))
+            G.Productions.append(newProd)
+            head.productions.append(newProd)
+            return
 
+        if body[i] not in null_prod:
+            prod.append(body[i])
+            add_prod(head, body, i + 1, prod)
+        else:
+            add_prod(head, body, i + 1, prod)
+            prod.append(body[i])
+            add_prod(head, body, i + 1, prod)
+            prod.pop()
 
-
-
-
-
+    G.Productions = []
+    for nt in G.nonTerminals:
+        nt_prod = nt.productions.copy()
+        nt.productions = []
+        for prod in nt_prod:
+            head, body = prod
+            if any([s in null_prod for s in body]):
+                production = []
+                add_prod(head, body, 0, production)
 
 
 
@@ -662,11 +655,6 @@ def remove_immediate_recursion(G):
 
         else:
             G.Productions.extend(item.productions)
-
-
-
-
-
 
 def grammar_from_input(input):
     terminals, nonTerminals, productions = [], [], []
@@ -715,7 +703,7 @@ def grammar_from_input(input):
 
     return G
 
-
 def simplifying_grammar(G):
-    remove_non_terminating_productions(G)
-    remove_useless_productions(G)
+    # remove_non_terminating_productions(G)
+    # remove_useless_productions(G)
+    remove_null_productions(G)
