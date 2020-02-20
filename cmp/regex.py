@@ -1,6 +1,5 @@
 from cmp.pycompiler import Grammar
 from cmp.utils import Token
-from cmp.nfa_dfa import NFA, DFA
 from cmp.tools import evaluate_parse
 from cmp.tools import metodo_predictivo_no_recursivo
 from cmp.tools import nfa_to_dfa
@@ -9,6 +8,30 @@ from cmp.tools import get_printer
 from cmp.tools import Node, AtomicNode, UnaryNode, BinaryNode, EpsilonNode, SymbolNode, ClosureNode, UnionNode, ConcatNode
 from pprint import pprint as pp
 import pydot
+
+class Regex:
+    def __init__(self, regular_exp):
+
+        self.regular_exp = regular_exp
+        self.tokens = regex_tokenizer(regular_exp, G, False)
+        self.left_parse = parser(self.tokens)
+        self.ast = evaluate_parse(self.left_parse, self.tokens)
+        self.nfa = self.ast.evaluate()
+        self.dfa = nfa_to_dfa(self.nfa)
+        self.mini = automata_minimization(self.dfa)
+        self.automaton = self.mini
+
+        
+        #Debugin
+        # print(printer(self.ast))
+        # self.mini._repr_png_().write_png(f'{regular_exp}.png')
+
+    def __call__(self, string):
+        return self.mini.recognize(string)
+
+    def __repr__(self):
+        return 'Regex: ' + self.regular_exp
+
 
 G = Grammar()
 
@@ -65,22 +88,3 @@ parser = metodo_predictivo_no_recursivo(G)
 
 
 printer = get_printer(AtomicNode=AtomicNode, UnaryNode=UnaryNode, BinaryNode=BinaryNode)
-
-class Regex:
-    def __init__(self, regular_exp):
-
-        self.tokens = regex_tokenizer(regular_exp, G, False)
-        self.left_parse = parser(self.tokens)
-        self.ast = evaluate_parse(self.left_parse, self.tokens)
-        self.nfa = self.ast.evaluate()
-        self.dfa = nfa_to_dfa(self.nfa)
-        self.mini = automata_minimization(self.dfa)
-        self.automaton = self.mini
-
-        
-        #Debugin
-        # print(printer(self.ast))
-        # self.mini._repr_png_().write_png(f'{regular_exp}.png')
-
-    def __call__(string):
-        return self.mini.recognize(string)

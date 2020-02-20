@@ -105,7 +105,3 @@ class DFA(NFA):
             if not self._move(symbol):
                 return False
         return self.current in self.finals
-
-
-
-
