@@ -511,6 +511,8 @@ def automata_minimization(automaton):
 
     return DFA(len(states), finals, transitions, start)
 
+
+#methods to simplify the grammar
 def remove_non_terminating_productions(G):
     terminals = set(G.terminals)
 
@@ -632,10 +634,9 @@ def remove_unit_productions(G):
         change = False
         for prod in unit_prod:
             head, body = prod.Left, prod.Right
-            if len(body) > 0:
-                sz = len(guf[head])
-                guf[head].update(guf[body[0]])
-                change |= (sz < len(guf[head]))
+            sz = len(guf[head])
+            guf[head].update(guf[body[0]])
+            change |= (sz < len(guf[head]))
 
     G.Productions = []
     for nt in G.nonTerminals:
@@ -643,6 +644,67 @@ def remove_unit_productions(G):
         for item in guf[nt]:
             nt %= item
 
+
+def remove_common_prefix(G):
+    unsolved = set([nt for nt in G.nonTerminals])
+
+    id = 1
+    while unsolved:
+        nonTerminals = G.nonTerminals.copy()
+        for nt in nonTerminals:
+            if nt in unsolved:
+                nt_prod = nt.productions.copy()
+                nt.productions = []
+                flag = set()
+
+                for item in nt_prod:
+                    if item not in flag:
+                        flag.add(item)
+                        if not item.IsEpsilon:
+                            common = set()
+                            symbols = []
+                            s = item.Right[0]
+                            symbols.append(s)
+                            for p in nt_prod:
+                                print(p)
+                                if p not in flag and not p.IsEpsilon:
+                                    print(p)
+                                    if p.Right[0] == s:
+                                        flag.add(p)
+                                        common.add(p)
+                            if len(common) == 0:
+                                item.Left %= item.Right
+                            else:
+                                for i in range(1, len(item.Right)):
+                                    for c in common:
+                                        if i == len(c.Right) or c.Right[i] != item.Right[i]:
+                                            break
+                                    else:
+                                        symbols.append(item.Right[i])
+                                        continue
+                                    break
+                                sentence = G.Epsilon
+                                for symbol in symbols:
+                                    sentence += symbol
+                                new_nt = G.NonTerminal(nt.Name + '_' + str(id))
+                                id += 1
+                                nt %= sentence + new_nt
+                                common.add(item)
+                                for c in common:
+                                    sent = G.Epsilon
+                                    for i in range(len(symbols), len(c.Right)):
+                                        sent += c.Right[i]
+                                    new_nt %= sent
+                                unsolved.add(new_nt)
+                        else:
+                            item.Left %= item.Right
+
+                unsolved.remove(nt)
+
+    G.Productions = []
+    for nt in G.nonTerminals:
+        for p in nt.productions:
+            G.Productions.append(p)
 
 def remove_immediate_recursion(G):
     G.Productions = []
@@ -719,3 +781,5 @@ def simplifying_grammar(G):
     remove_unit_productions(G)
     remove_non_terminating_productions(G)
     remove_useless_productions(G)
+    remove_immediate_recursion(G)
+    remove_common_prefix(G)
