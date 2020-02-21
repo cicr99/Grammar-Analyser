@@ -614,6 +614,34 @@ def remove_null_productions(G):
                 production = []
                 add_prod(head, body, 0, production)
 
+def remove_unit_productions(G):
+    guf = {nt : set() for nt in G.nonTerminals}
+    unit_prod = set()
+
+    for prod in G.Productions:
+        head, body = prod.Left, prod.Right
+        if len(body) == 1 and isinstance(body[0], NonTerminal):
+            unit_prod.add(prod)
+        else:
+            guf[head].add(body)
+
+    change = True
+    while change:
+        change = False
+        for prod in unit_prod:
+            head, body = prod.Left, prod.Right
+            if len(body) > 0:
+                sz = len(guf[head])
+                guf[head].update(guf[body[0]])
+                change |= (sz < len(guf[head]))
+
+    G.Productions = []
+    for nt in G.nonTerminals:
+        nt.productions = []
+        for item in guf[nt]:
+            nt %= item
+
+
 def remove_immediate_recursion(G):
     G.Productions = []
 
@@ -685,6 +713,7 @@ def grammar_from_input(input):
     return G
 
 def simplifying_grammar(G):
-    remove_null_productions(G)
+    #remove_null_productions(G)
+    remove_unit_productions(G)
     # remove_non_terminating_productions(G)
     # remove_useless_productions(G)

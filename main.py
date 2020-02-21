@@ -7,24 +7,13 @@ from cmp.automata_to_regex import AutomataToRegex
 from pprint import pprint
 
 
-# text = '''
-# Distinguido = S
-# NoTerminales = [ A, B, C ]
-# Terminales = [ a, b, c, d ]
-# S = a + b + S ; a + b + A ; a + b + B
-# A = a + d
-# B = a + B
-# C = d + c
-# '''
-
 text = '''
 Distinguido = S
-NoTerminales = [ A, B, C ]
-Terminales = [ b, c, d ]
-S = A + B + C + d
-A = B + C
-B = b + B; epsilon
-C = c + C; epsilon
+NoTerminales = [ A, B ]
+Terminales = [ a, b ]
+S = A + a; B
+A = b; B
+B = A; a
 '''
 
 def main():
