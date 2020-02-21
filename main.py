@@ -9,11 +9,12 @@ from pprint import pprint
 
 text = '''
 Distinguido = S
-NoTerminales = [ A, B ]
+NoTerminales = [ A, B, C ]
 Terminales = [ a, b ]
-S = A + a; B
+S = A + a; B; C + b + a
 A = b; B
 B = A; a
+C = b; epsilon
 '''
 
 def main():

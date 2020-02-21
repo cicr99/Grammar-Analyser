@@ -613,6 +613,8 @@ def remove_null_productions(G):
             if any([s in null_prod for s in body]):
                 production = []
                 add_prod(head, body, 0, production)
+            elif len(body) > 0:
+                head %= body
 
 def remove_unit_productions(G):
     guf = {nt : set() for nt in G.nonTerminals}
@@ -713,7 +715,7 @@ def grammar_from_input(input):
     return G
 
 def simplifying_grammar(G):
-    #remove_null_productions(G)
+    remove_null_productions(G)
     remove_unit_productions(G)
-    # remove_non_terminating_productions(G)
-    # remove_useless_productions(G)
+    remove_non_terminating_productions(G)
+    remove_useless_productions(G)
