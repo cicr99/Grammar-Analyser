@@ -7,6 +7,14 @@ from cmp.automata_to_regex import AutomataToRegex
 from pprint import pprint
 
 
+text = '''
+Distinguido = S
+NoTerminales = [ A ]
+Terminales = [ a, b, d ]
+S = a + b + S; a + b + A; A
+A = a + d; A + d; a + S; epsilon
+'''
+
 def main():
     st.title('Grammar Analyser')
 
@@ -42,7 +50,20 @@ def main2():
     simplifying_grammar(G)
     print(G)
 
+    firsts = compute_firsts(G)
+    follows = compute_follows(G, firsts)
 
+    # print('FIRSTS')
+    # pprint(firsts)
+    # print()
+    # print('FOLLOWS')
+    # pprint(follows)
+
+    M,_  = build_parsing_table(G, firsts, follows)
+    # print()
+    # print('M')
+    # pprint(M)
+    print(ll1_conflict(G, M))
 
 if __name__ == '__main__':
     main2()

@@ -150,19 +150,29 @@ def compute_follows(G, firsts):
 
 def build_parsing_table(G, firsts, follows):
     M = {}
+    ok = True
+
+    def upd_table(head, symbol, production):
+        if not head in M:
+            M[head] = {}
+        if not symbol in M[head]:
+            M[head][symbol] = []
+        if production not in M[head][symbol]:
+            M[head][symbol].append(production)
+        return (len(M[head][symbol]) <= 1)
 
     for production in G.Productions:
         X = production.Left
         alpha = production.Right
 
         for t in firsts[alpha]:
-            M[X, t] = [production, ]
+            ok &= upd_table(X, t, production)
 
         if firsts[alpha].contains_epsilon:
             for t in follows[X]:
-                M[X, t] = [production, ]
+                ok &= upd_table(X, t, production)
 
-    return M
+    return M, ok
 
 def deprecated_metodo_predictivo_no_recursivo(G, M=None, firsts=None, follows=None):
 
@@ -171,8 +181,7 @@ def deprecated_metodo_predictivo_no_recursivo(G, M=None, firsts=None, follows=No
             firsts = compute_firsts(G)
         if follows is None:
             follows = compute_follows(G, firsts)
-        M = build_parsing_table(G, firsts, follows)
-        # pprint(M)
+        M, _ = build_parsing_table(G, firsts, follows)
 
     def parser(w):
 
@@ -181,7 +190,6 @@ def deprecated_metodo_predictivo_no_recursivo(G, M=None, firsts=None, follows=No
         output = []
 
         while True:
-            # print(stack, cursor)
             top = stack.pop()
             a = w[cursor]
 
@@ -193,7 +201,7 @@ def deprecated_metodo_predictivo_no_recursivo(G, M=None, firsts=None, follows=No
                     break;
                 cursor += 1
             else:
-                production = M[top, a][0]
+                production = M[top][a][0]
                 output.append(production)
                 production = list(production.Right)
                 stack.extend(production[::-1])
@@ -618,6 +626,9 @@ def remove_null_productions(G):
             elif len(body) > 0:
                 head %= body
 
+    # if G.startSymbol in null_prod:
+    #     G.startSymbol %= G.Epsilon
+
 def remove_unit_productions(G):
     guf = {nt : set() for nt in G.nonTerminals}
     unit_prod = set()
@@ -635,7 +646,12 @@ def remove_unit_productions(G):
         for prod in unit_prod:
             head, body = prod.Left, prod.Right
             sz = len(guf[head])
-            guf[head].update(guf[body[0]])
+            #guf[head].update(guf[body[0]])
+            for item in guf[body[0]]:
+                if not item:
+                    guf[head].add(G.Epsilon)
+                else:
+                    guf[head].add(item)
             change |= (sz < len(guf[head]))
 
     G.Productions = []
@@ -666,9 +682,7 @@ def remove_common_prefix(G):
                             s = item.Right[0]
                             symbols.append(s)
                             for p in nt_prod:
-                                print(p)
                                 if p not in flag and not p.IsEpsilon:
-                                    print(p)
                                     if p.Right[0] == s:
                                         flag.add(p)
                                         common.add(p)
@@ -783,3 +797,55 @@ def simplifying_grammar(G):
     remove_useless_productions(G)
     remove_immediate_recursion(G)
     remove_common_prefix(G)
+
+
+
+def validate_conflict(w, M, G):
+    stack =  [G.EOF, G.startSymbol]
+    cursor = 0
+
+    while True:
+        top = stack.pop()
+        a = w[cursor]
+
+        if top.IsEpsilon:
+            pass
+        elif top.IsTerminal:
+            assert top == a
+            if top == G.EOF:
+                break;
+            cursor += 1
+        else:
+            if len(M[top][a]) > 1:
+                return True
+            production = M[top][a][0]
+            production = list(production.Right)
+            stack.extend(production[::-1])
+
+    return False
+
+def ll1_conflict(G, M):
+    queue = []
+    mapped = {t.Name : t for t in G.terminals}
+
+    queue.append(([G.startSymbol], '', False))
+    while queue:
+        prod, word, conflict = queue.pop(0)
+        while prod and isinstance(prod[0], Terminal):
+            word += str(prod.pop(0))
+
+        if not prod:
+            if conflict:
+                w = [mapped[item] for item in word]
+                w.append(G.EOF)
+                if validate_conflict(w, M, G):
+                    return word
+            continue
+
+        symbol = prod.pop(0)
+        for terminal in M[symbol]:
+            c = conflict or len(M[symbol][terminal]) > 1
+            for p in M[symbol][terminal]:
+                body = list(p.Right)
+                body.extend(prod)
+                queue.append((body, word, c))
