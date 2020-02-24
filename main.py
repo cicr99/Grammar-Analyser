@@ -73,6 +73,11 @@ def main2():
             st.error('It\'s not LL(1)!')
             st.write(f'Conflictive string: **\"{ll1_conflict(G, M)}\"**')
 
+        else:
+            word = st.text_area('Input a string to get the derivation tree:')
+            if word:
+                make_tree_LL1(G, word, M, firsts, follows)
+
 
 
         #SHIFT-REDUCE parsers analysis
@@ -80,6 +85,7 @@ def main2():
 
         parsers = [SLR1Parser, LR1Parser, LALR1Parser]
         parsers_name = ['SLR(1)', 'LR(1)', 'LALR(1)']
+        words = []
         for i, parser_class in enumerate(parsers):
             st.title(f'{parsers_name[i]} Parser')
             parser = parser_class(GG)

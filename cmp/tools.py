@@ -1161,3 +1161,56 @@ def ll1_analysis(G):
 
     return firsts, follows, M, ok
 
+
+
+def derivation_tree(d):
+    def add_trans(cur, transitions):
+        for symbol in transitions:
+            if symbol.IsTerminal:
+                cur.add_transition('', State(symbol, True))
+            else:
+                s = State(symbol, True)
+                try:
+                    old[symbol].append(s)
+                except KeyError:
+                    old[symbol] = [s]
+                cur.add_transition('', s)
+        if len(transitions) == 0:
+            cur.add_transition('', State(transitions, True))
+
+    p1 = d[0]
+    old = {}
+    root = State(p1.Left.Name, True)
+    add_trans(root, p1.Right)
+
+    for p in d[1:]:
+        node = old[p.Left].pop()
+        add_trans(node, p.Right)
+
+    return root
+
+
+def parse_string(G, word):
+    m = {t.Name:t for t in G.terminals}
+    word = word.split()
+    w = [m[item] for item in word]
+    w.append(G.EOF)
+    return w
+
+def make_tree_LL1(G, w, M, firsts, follows):
+    try:
+        w = parse_string(G, w)
+        return derivation_tree(metodo_predictivo_no_recursivo(G, M, firsts, follows)(w))._repr_svg_('TD')
+    except Exception as e:
+        return 'String not recognized'
+
+
+def make_tree(G, w, parser):
+    try:
+        w = parse_string(G, w)
+        d = parser(w)
+        d.reverse()
+        return derivation_tree(d)._repr_svg_('TD')
+
+    except Exception as e:
+        return "String not recognized"

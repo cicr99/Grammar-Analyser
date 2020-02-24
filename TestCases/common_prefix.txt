@@ -42,3 +42,11 @@ S = a + A + d; a + B
 A = a; a + b
 B = c + c + d; d + d + c
 '''
+
+text = '''
+Distinguido = S
+NoTerminales = [ A ]
+Terminales = [ a, b, d ]
+S = a + b + S; a + b + A; A
+A = a + d; A + d; a + S; epsilon
+'''
