@@ -194,6 +194,12 @@ class State:
         except:
             pass
 
+    def _repr_png_(self, name):
+        try:
+            return self.graph().write_png(f'{name}.png')
+        except:
+            pass
+
     def write_to(self, fname):
         return self.graph().write_svg(fname)
 
