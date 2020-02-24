@@ -1,8 +1,8 @@
 from cmp.utils import *
-from itertools import islice
 from cmp.nfa_dfa import *
 from cmp.automata import *
 from cmp.pycompiler import *
+from itertools import islice
 import cmp.visitor as visitor
 
 class Node:
@@ -63,6 +63,16 @@ class ConcatNode(BinaryNode):
     def operate(lvalue, rvalue):
         return automata_concatenation(lvalue, rvalue)
 
+
+#this method is used for updating ll1 table as well as action-goto table
+def upd_table(table, head, symbol, production):
+    if not head in table:
+        table[head] = {}
+    if not symbol in table[head]:
+        table[head][symbol] = []
+    if production not in table[head][symbol]:
+        table[head][symbol].append(production)
+    return (len(table[head][symbol]) <= 1)
 
 
 def compute_local_first(firsts, alpha):
@@ -152,25 +162,16 @@ def build_parsing_table(G, firsts, follows):
     M = {}
     ok = True
 
-    def upd_table(head, symbol, production):
-        if not head in M:
-            M[head] = {}
-        if not symbol in M[head]:
-            M[head][symbol] = []
-        if production not in M[head][symbol]:
-            M[head][symbol].append(production)
-        return (len(M[head][symbol]) <= 1)
-
     for production in G.Productions:
         X = production.Left
         alpha = production.Right
 
         for t in firsts[alpha]:
-            ok &= upd_table(X, t, production)
+            ok &= upd_table(M, X, t, production)
 
         if firsts[alpha].contains_epsilon:
             for t in follows[X]:
-                ok &= upd_table(X, t, production)
+                ok &= upd_table(M, X, t, production)
 
     return M, ok
 
@@ -682,7 +683,7 @@ def remove_common_prefix(G):
                             s = item.Right[0]
                             symbols.append(s)
                             for p in nt_prod:
-                                if p not in flag and not p.IsEpsilon:
+                                if p not in flag and len(p.Right) > 0:
                                     if p.Right[0] == s:
                                         flag.add(p)
                                         common.add(p)
@@ -771,9 +772,11 @@ def grammar_from_input(input):
         right, = right.split()
 
         sentences = sentences.split(';')
+        # sentences = sentences.split('|')
         for s in sentences:
             s = s.replace('+', ' ').split()
-            productions.append({'Head': right, 'Body': list(s)})
+            # s = s.split()
+            productions.append({'Head': right, 'Body': s})
 
     d = dict()
     d['NonTerminals'] = nonTerminals
@@ -849,3 +852,312 @@ def ll1_conflict(G, M):
                 body = list(p.Right)
                 body.extend(prod)
                 queue.append((body, word, c))
+
+
+
+def build_LR0_automaton(G):
+    assert len(G.startSymbol.productions) == 1, 'Grammar must be augmented'
+
+    start_production = G.startSymbol.productions[0]
+    start_item = Item(start_production, 0)
+
+    automaton = State(start_item, True)
+
+    pending = [start_item]
+    visited = {start_item: automaton}
+
+    while pending:
+        current_item = pending.pop()
+        if current_item.IsReduceItem:
+            continue
+
+        # Your code here!!! (Decide which transitions to add)
+        transitions = []
+
+        next_item = current_item.NextItem()
+        if next_item not in visited:
+            visited[next_item] = State(next_item, True)
+            pending.append(next_item)
+        transitions.append(visited[next_item])
+
+        symbol = current_item.NextSymbol
+        if symbol.IsNonTerminal:
+            for prod in symbol.productions:
+                item = Item(prod, 0)
+                if item not in visited:
+                    visited[item] = State(item, True)
+                    pending.append(item)
+                transitions.append(visited[item])
+
+        current_state = visited[current_item]
+        # Your code here!!! (Add the decided transitions)
+        current_state.add_transition(current_item.NextSymbol.Name, transitions[0])
+        for item in transitions[1:]:
+            current_state.add_epsilon_transition(item)
+    return automaton
+
+class SLR1Parser(ShiftReduceParser):
+    def _build_parsing_table(self):
+        self.ok = True
+        G = self.Augmented = self.G.AugmentedGrammar(True)
+        firsts = compute_firsts(G)
+        follows = compute_follows(G, firsts)
+
+        self.automaton = build_LR0_automaton(G).to_deterministic(lambda x: "")
+        for i, node in enumerate(self.automaton):
+            if self.verbose: print(i, node)
+            node.idx = i
+            node.tag = f'I{i}'
+
+        for node in self.automaton:
+            idx = node.idx
+            for state in node.state:
+                item = state.state
+                if item.IsReduceItem:
+                    if item.production.Left == G.startSymbol:
+                        self.ok &= upd_table(self.action, idx, G.EOF, (SLR1Parser.OK, ''))
+                    else:
+                        for terminal in follows[item.production.Left]:
+                            self.ok &= upd_table(self.action, idx, terminal, (SLR1Parser.REDUCE, item.production))
+                else:
+                    symbol = item.NextSymbol
+
+                    if symbol.IsTerminal:
+                        self.ok &= upd_table(self.action, idx, symbol, (SLR1Parser.SHIFT, node[symbol.Name][0].idx))
+                    else:
+                        self.ok &= upd_table(self.goto, idx, symbol, node[symbol.Name][0].idx)
+
+def expand(item, firsts):
+    next_symbol = item.NextSymbol
+    if next_symbol is None or not next_symbol.IsNonTerminal:
+        return []
+
+    lookaheads = ContainerSet()
+    # Your code here!!! (Compute lookahead for child items)
+    for preview in item.Preview():
+        lookaheads.hard_update(compute_local_first(firsts, preview))
+
+    assert not lookaheads.contains_epsilon
+    # Your code here!!! (Build and return child items)
+    return [Item(prod, 0, lookaheads) for prod in next_symbol.productions]
+
+def compress(items):
+    centers = {}
+
+    for item in items:
+        center = item.Center()
+        try:
+            lookaheads = centers[center]
+        except KeyError:
+            centers[center] = lookaheads = set()
+        lookaheads.update(item.lookaheads)
+
+    return {Item(x.production, x.pos, set(lookahead)) for x, lookahead in centers.items()}
+
+def closure_lr1(items, firsts):
+    closure = ContainerSet(*items)
+
+    changed = True
+    while changed:
+        changed = False
+
+        new_items = ContainerSet()
+        for item in closure:
+            new_items.extend(expand(item, firsts))
+
+        changed = closure.update(new_items)
+
+    return compress(closure)
+
+def goto_lr1(items, symbol, firsts=None, just_kernel=False):
+    assert just_kernel or firsts is not None, '`firsts` must be provided if `just_kernel=False`'
+    items = frozenset(item.NextItem() for item in items if item.NextSymbol == symbol)
+    return items if just_kernel else closure_lr1(items, firsts)
+
+def build_LR1_automaton(G):
+    assert len(G.startSymbol.productions) == 1, 'Grammar must be augmented'
+
+    firsts = compute_firsts(G)
+    firsts[G.EOF] = ContainerSet(G.EOF)
+
+    start_production = G.startSymbol.productions[0]
+    start_item = Item(start_production, 0, lookaheads=(G.EOF,))
+    start = frozenset([start_item])
+
+    closure = closure_lr1(start, firsts)
+    automaton = State(frozenset(closure), True)
+
+    pending = [start]
+    visited = {start: automaton}
+
+    while pending:
+        current = pending.pop()
+        current_state = visited[current]
+
+        for symbol in G.terminals + G.nonTerminals:
+            # Your code here!!! (Get/Build `next_state`)
+            items = current_state.state
+            kernel = goto_lr1(items, symbol, just_kernel=True)
+            if not kernel:
+                continue
+            try:
+                next_state = visited[kernel]
+            except KeyError:
+                closure = goto_lr1(items, symbol, firsts)
+                next_state = visited[kernel] = State(frozenset(closure), True)
+                pending.append(kernel)
+
+            current_state.add_transition(symbol.Name, next_state)
+
+    automaton.set_formatter(lambda x: "")
+    return automaton
+
+class LR1Parser(ShiftReduceParser):
+    def _build_parsing_table(self):
+        self.ok = True
+        G = self.Augmented = self.G.AugmentedGrammar(True)
+
+        automaton = self.automaton = build_LR1_automaton(G)
+        for i, node in enumerate(automaton):
+            if self.verbose: print(i, '\t', '\n\t '.join(str(x) for x in node.state), '\n')
+            node.idx = i
+            node.tag = f'I{i}'
+
+        for node in automaton:
+            idx = node.idx
+            for item in node.state:
+                if item.IsReduceItem:
+                    prod = item.production
+                    if prod.Left == G.startSymbol:
+                        self.ok &= upd_table(self.action, idx, G.EOF, (ShiftReduceParser.OK, ''))
+                    else:
+                        for lookahead in item.lookaheads:
+                            self.ok &= upd_table(self.action, idx, lookahead, (ShiftReduceParser.REDUCE, prod))
+                else:
+                    next_symbol = item.NextSymbol
+                    if next_symbol.IsTerminal:
+                        self.ok &= upd_table(self.action, idx, next_symbol, (ShiftReduceParser.SHIFT, node[next_symbol.Name][0].idx))
+                    else:
+                        self.ok &= upd_table(self.goto, idx, next_symbol, node[next_symbol.Name][0].idx)
+
+def mergue_items_lookaheads(items, others):
+    if len(items) != len(others):
+        return False
+
+    new_lookaheads = []
+    for item in items:
+        for item2 in others:
+            if item.Center() == item2.Center():
+                new_lookaheads.append(item2.lookaheads)
+                break
+        else:
+            return False
+
+    for item, new_lookahead in zip(items, new_lookaheads):
+        item.lookaheads = item.lookaheads.union(new_lookahead)
+
+    return True
+
+def build_LALR1_automaton(G):
+    lr1_automaton  = build_LR1_automaton(G)
+    states = list(lr1_automaton)
+    new_states = []
+    visited = {}
+
+    for i, state in enumerate(states):
+        if state not in visited:
+            # creates items
+            items = [item.Center() for item in state.state]
+
+            # check for states with same center
+            for state2 in states[i:]:
+                if mergue_items_lookaheads(items, state2.state):
+                    visited[state2] = len(new_states)
+
+            # add new state
+            new_states.append(State(frozenset(items), True))
+
+    # making transitions
+    for state in states:
+        new_state = new_states[visited[state]]
+        for symbol, transitions in state.transitions.items():
+            for state2 in transitions:
+                new_state2 = new_states[visited[state2]]
+                # check if the transition already exists
+                if symbol not in new_state.transitions or new_state2 not in new_state.transitions[symbol]:
+                    new_state.add_transition(symbol, new_state2)
+
+    new_states[0].set_formatter(empty_formatter)
+    return new_states[0]
+
+class LALR1Parser(ShiftReduceParser):
+    def _build_parsing_table(self):
+        self.ok = True
+        G = self.Augmented = self.G.AugmentedGrammar(True)
+
+        automaton = self.automaton = build_LALR1_automaton(G)
+        for i, node in enumerate(automaton):
+            if self.verbose: print(i, '\t', '\n\t '.join(str(x) for x in node.state), '\n')
+            node.idx = i
+            node.tag = f'I{i}'
+
+        for node in automaton:
+            idx = node.idx
+            for item in node.state:
+                if item.IsReduceItem:
+                    prod = item.production
+                    if prod.Left == G.startSymbol:
+                        self.ok &= upd_table(self.action, idx, G.EOF, (ShiftReduceParser.OK, ''))
+                    else:
+                        for lookahead in item.lookaheads:
+                            self.ok &= upd_table(self.action, idx, lookahead, (ShiftReduceParser.REDUCE, prod))
+                else:
+                    next_symbol = item.NextSymbol
+                    if next_symbol.IsTerminal:
+                        self.ok &= upd_table(self.action, idx, next_symbol, (ShiftReduceParser.SHIFT, node[next_symbol.Name][0].idx))
+                    else:
+                        self.ok &= upd_table(self.goto, idx, next_symbol, node[next_symbol.Name][0].idx)
+
+
+
+def action_goto_conflict(action, goto):
+    # (stack, word, conflict, terminal)
+    queue = [([0], '', False, None)]
+
+    while queue:
+        stack, word, conflict, terminal = queue.pop(0)
+        state = stack[-1]
+        try:
+            if terminal is not None:
+                actions = action[state][terminal]
+                if any([act for act, _ in actions if act == SLR1Parser.OK]) and conflict:
+                    return word
+
+                conflict |= (len(actions) > 1)
+                for act, tag in actions:
+                    if act == SLR1Parser.SHIFT:
+                        queue.append((stack + [tag], word + terminal.Name, conflict, None))
+                    elif act == SLR1Parser.REDUCE:
+                        s = stack.copy()
+                        if not tag.IsEpsilon:
+                            s = s[:-len(tag.Right)]
+                        data = goto[s[-1]][tag.Left]
+                        c = (len(data) > 1) or conflict
+                        for go in data:
+                            queue.append((s + [go], word, c, terminal))
+            else:
+                for symbol in action[state]:
+                    queue.append((stack, word, conflict, symbol))
+        except Exception as e:
+            print(f'FAILURE {e}')
+
+
+
+def ll1_analysis(G):
+    firsts = compute_firsts(G)
+    follows = compute_follows(G, firsts)
+
+    M, ok  = build_parsing_table(G, firsts, follows)
+
+    return firsts, follows, M, ok
+

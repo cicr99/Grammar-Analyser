@@ -2,9 +2,10 @@ from input import GrammarFromInput
 from cmp.tools import *
 from pprint import pprint
 import streamlit as st
-from cmp.grammar_to_automata import GrammarToAutomata
+from cmp.grammar_to_automata import *
 from cmp.automata_to_regex import AutomataToRegex
 from pprint import pprint
+from cmp.visual import *
 
 
 text = '''
@@ -45,25 +46,65 @@ def main():
 
 
 def main2():
-    G = grammar_from_input(text)
-    print(G)
-    simplifying_grammar(G)
-    print(G)
+    st.title('Grammar Analyser')
 
-    firsts = compute_firsts(G)
-    follows = compute_follows(G, firsts)
+    st.sidebar.markdown('''Produced by:  
+    Carmen Irene Cabrera Rodríguez  
+    Enrique Martínez González''')
 
-    # print('FIRSTS')
-    # pprint(firsts)
-    # print()
-    # print('FOLLOWS')
-    # pprint(follows)
+    text = st.text_area('Input your grammar here:')
 
-    M,_  = build_parsing_table(G, firsts, follows)
-    # print()
-    # print('M')
-    # pprint(M)
-    print(ll1_conflict(G, M))
+    if text:
+        G = grammar_from_input(text)
+        display_grammar(G, 'Given Grammar')
+
+        simplifying_grammar(G)
+        display_grammar(G, 'Fixed Grammar')
+
+
+        #LL1 analysis
+        st.title('LL1Parser')
+        firsts, follows, M, is_ll1 = ll1_analysis(G)
+
+        display_table(M, G.terminals + [G.EOF], 'LL1 TABLE')
+
+        if not is_ll1:
+            st.write('')
+            st.error('It\'s not LL(1)!')
+            st.write(f'Conflictive string: **\"{ll1_conflict(G, M)}\"**')
+
+
+
+        #SHIFT-REDUCE parsers analysis
+        GG = G.AugmentedGrammar()
+
+        parsers = [SLR1Parser, LR1Parser, LALR1Parser]
+        parsers_name = ['SLR(1)', 'LR(1)', 'LALR(1)']
+        for i, parser_class in enumerate(parsers):
+            st.title(f'{parsers_name[i]} Parser')
+            parser = parser_class(GG)
+            ok, action, goto = parser.ok, parser.action, parser.goto
+            display_table(action, G.terminals + [G.EOF], 'ACTION')
+            display_table(goto, G.nonTerminals, 'GOTO')
+
+            if not ok:
+                st.write('')
+                st.error(f'It\'s not {parsers_name[i]}!')
+                st.write(f'Conflictive string: **\"{action_goto_conflict(action, goto)}\"**')
+
+
+        #Regular Grammar Analysis
+
+        st.title('Is it a Regular Grammar?')
+        is_Regular, nfa = analyzing_regularity(G)
+        if is_Regular:
+            nfa._repr_png_().write_png('nfa.png')
+            gnfa = AutomataToRegex(nfa).GetGNFA()
+            gnfa._repr_png_().write_png('gnfa.png')
+            print(AutomataToRegex(nfa).GetRegex())
+        else:
+            st.write('')
+            st.error(f'It\'s not!')
 
 if __name__ == '__main__':
     main2()

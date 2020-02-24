@@ -1,0 +1,11 @@
+
+text = '''
+Distinguido = E
+NoTerminales = [ T, X, F, Y ]
+Terminales = [ +, -, *, /, (, ), num ]
+E = T X
+X = + T X | - T X | epsilon
+T = F Y
+Y = * F Y | / F Y | epsilon
+F = ( E ) | num
+'''
