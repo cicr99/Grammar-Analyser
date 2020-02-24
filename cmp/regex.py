@@ -63,21 +63,25 @@ A %= epsilon, lambda h, s: EpsilonNode(s[1])
 
 def regex_tokenizer(text, G, skip_whitespaces=True):
     tokens = []
+    jump = False
     for char in text:
         if skip_whitespaces and char.isspace():
             continue
-        if(char == '*'):
+        elif(char == '\\'):
+            jump = True
+        elif(char == '*' and not jump):
             tokens.append(Token('*', star))
-        elif(char == '('):
+        elif(char == '(' and not jump):
             tokens.append(Token('(', opar))
-        elif(char == ')'):
+        elif(char == ')' and not jump):
             tokens.append(Token(')', cpar))
-        elif(char == '|'):
+        elif(char == '|' and not jump):
             tokens.append(Token('|', pipe))
-        elif(char == 'ε'):
+        elif(char == 'ε' and not jump):
             tokens.append(Token('ε', epsilon))
         else:
             tokens.append(Token(char, symbol))
+            jump = False
 
     tokens.append(Token('$', G.EOF))
     return tokens
