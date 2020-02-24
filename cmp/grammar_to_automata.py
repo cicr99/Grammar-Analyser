@@ -60,3 +60,12 @@ class GrammarToAutomata:
         
 
 
+def analyzing_regularity(G):
+    ok = True
+    nfa = None
+    try:
+        nfa = GrammarToAutomata(G).CalculateRegularNFA()
+    except:
+        ok = False
+
+    return ok, nfa

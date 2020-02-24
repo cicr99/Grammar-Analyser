@@ -1,0 +1,10 @@
+
+text = '''
+Distinguido = S
+NoTerminales = [ A, B, C ]
+Terminales = [ a, b, c, d ]
+S = a + b + S ; a + b + A ; a + b + B
+A = a + d
+B = a + B
+C = d + c
+'''

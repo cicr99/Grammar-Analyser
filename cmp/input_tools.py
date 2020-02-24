@@ -4,7 +4,7 @@ from cmp.pycompiler import Production, Sentence
 class MultiNodeGrammar(Node):
     def __init__(self, lis):
         self.lis = lis
-    
+
     def evaluate(self, context):
         for i in self.lis:
             # print(i)
@@ -13,7 +13,7 @@ class MultiNodeGrammar(Node):
 class EpsilonNodeGrammar(Node):
     def __init__(self):
         pass
-    
+
     def evaluate(self, context):
         return
 
@@ -21,7 +21,7 @@ class DisNodeGrammar(Node):
     def __init__(self, dis, sym):
         self.dis = dis
         self.sym = sym
-    
+
     def evaluate(self, context):
         context.NTerminals[self.dis] = context.Grammar.NonTerminal(self.sym, True)
 
@@ -29,7 +29,7 @@ class UnaryNodeGrammar(Node):
     def __init__(self, node, context):
         self.node = node
         self.context = context
-    
+
     def evaluate(self):
         node.evaluate(self.context)
 
@@ -37,7 +37,7 @@ class NonTerminalNodeGrammar(Node):
     def __init__(self, izq, der):
         self.izq = izq
         self.der = der
-    
+
     def evaluate(self, context):
         context.NTerminals[self.izq] = context.Grammar.NonTerminal(self.der)
 
@@ -53,7 +53,7 @@ class ProductionNodeGrammar(Node):
     def __init__(self, izq, der):
         self.izq = izq
         self.der = der
-        
+
 
     def evaluate(self, context):
 
@@ -68,7 +68,7 @@ class ProductionNodeGrammar(Node):
                 sentence = i
                 if isinstance(sentence, SentenceNodeGrammar):
                     sentence = i.evaluate(context)
-                
+
                 try:
                     context.Productions[context.NTerminals[str(self.izq)]].append(Production(context.NTerminals[str(self.izq)], sentence))
                 except:
@@ -116,4 +116,4 @@ class SentenceNodeGrammar(Node):
             return a + b
         temp = self.izq.evaluate(context)
         return temp + b
-                
+

@@ -1,0 +1,7 @@
+Distinguido = S
+NoTerminales = [ A, B, C ]
+Terminales = [ b, c, d ]
+S = A + B + C + d
+A = B + C
+B = b + B; epsilon
+C = c + C; epsilon

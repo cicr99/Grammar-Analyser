@@ -1,0 +1,52 @@
+text = '''
+Distinguido = S
+NoTerminales = [ E ]
+Terminales = [ i, t, e, a, b ]
+S = i + E + t + S; i + E + t + S + e + S
+E = b
+'''
+
+text = '''
+Distinguido = A
+NoTerminales = [ B ]
+Terminales = [ a, b, c ]
+A = a + A + B; a + B + c; a + A + c
+'''
+
+text = '''
+Distinguido = S
+NoTerminales = [ ]
+Terminales = [ a, b ]
+S = b + S + S + a + a + S; b + S + S + a + S + b; b + S + b; a
+'''
+
+text = '''
+Distinguido = S
+NoTerminales = [ ]
+Terminales = [ a, b ]
+S = a + S + S + b + S; a + S + a + S + b; a + b + b; b
+'''
+
+text = '''
+Distinguido = S
+NoTerminales = [ ]
+Terminales = [ a, b, c, d ]
+S = a; a + b; a + b + c; a + b + c + d
+'''
+
+text = '''
+Distinguido = S
+NoTerminales = [ A, B ]
+Terminales = [ a, b, c, d ]
+S = a + A + d; a + B
+A = a; a + b
+B = c + c + d; d + d + c
+'''
+
+text = '''
+Distinguido = S
+NoTerminales = [ A ]
+Terminales = [ a, b, d ]
+S = a + b + S; a + b + A; A
+A = a + d; A + d; a + S; epsilon
+'''
