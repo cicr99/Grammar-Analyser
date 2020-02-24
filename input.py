@@ -66,7 +66,7 @@ lexer = Lexer([
     ('salto', '\n'),
     (comilla, '\''),
     ('space', '  *'),
-    (id, f'({letters})({letters}|0|{nonzero_digits})*'),
+    (id, f'({letters}|\(|\))({letters}|0|{nonzero_digits})*'),
                ], G.EOF)
 
 class GrammarFromInput:

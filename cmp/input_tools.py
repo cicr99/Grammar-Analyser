@@ -1,5 +1,5 @@
 from cmp.tools import Node
-from cmp.pycompiler import Production, Sentence
+from cmp.pycompiler import Production, Sentence, Epsilon
 
 class MultiNodeGrammar(Node):
     def __init__(self, lis):
@@ -78,6 +78,10 @@ class ProductionNodeGrammar(Node):
             return
 
         b = context.Terminals[str(self.der)] if str(self.der) in context.Terminals else context.NTerminals[str(self.der)]
+        
+        if(str(self.der) == 'epsilon'):
+            b = context.Grammar.Epsilon
+
         # print(b)
 
         context.Productions[context.NTerminals[str(self.izq)]] = Production(context.NTerminals[str(self.izq)], Sentence(b))
@@ -91,8 +95,11 @@ class SentencesNodeGrammar(Node):
     def evaluate(self, context):
         ret = []
         if not isinstance(self.der, SentenceNodeGrammar):
-            der = context.Terminals[str(self.der)] if str(self.der) in context.Terminals else context.NTerminals[str(self.der)]
-            self.der = Sentence(der)
+            if(str(self.der) == 'epsilon'):
+                self.der = context.Grammar.Epsilon
+            else:
+                der = context.Terminals[str(self.der)] if str(self.der) in context.Terminals else context.NTerminals[str(self.der)]
+                self.der = Sentence(der)
         if isinstance(self.izq, SentenceNodeGrammar):
             return [self.izq, self.der]
         elif isinstance(self.izq, SentencesNodeGrammar):
