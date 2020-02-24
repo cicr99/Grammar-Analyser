@@ -22,7 +22,7 @@ Distinguido = <S, 'S'>
 NoTerminales = [ <A, 'A'> ]
 Terminales = [ <a, 'a'>, <b, 'b'>, <d, 'd'> ]
 S = a + A
-A = a + d; d; epsilon
+A = a
 '''
 
 def main():
@@ -40,9 +40,10 @@ def main():
         simplifying_grammar(G)
         print(G)
         firsts, follows, M, is_ll1 = ll1_analysis(G)
-        word = 'a a d'
+        word = 'a a'
         if word:
-            print(make_tree_LL1(G, word, M, firsts, follows))
+            make_tree_LL1(G, word, M, firsts, follows)._repr_png_('ttt')
+            # print(make_tree_LL1(G, word, M, firsts, follows))
         # st.write(G)
         # simplifying_grammar(G)
         # st.write(G)
@@ -92,7 +93,6 @@ def main2():
         else:
             word = st.text_area('Input a string to get the derivation tree:')
             if word:
-                # st.write(make_tree_LL1(G, word, M, firsts, follows))
                 st.graphviz_chart(str(make_tree_LL1(G, word, M, firsts, follows).graph()))
 
 
@@ -102,7 +102,7 @@ def main2():
 
         parsers = [SLR1Parser, LR1Parser, LALR1Parser]
         parsers_name = ['SLR(1)', 'LR(1)', 'LALR(1)']
-        words = []
+        words = ['' for _ in range(3)]
         for i, parser_class in enumerate(parsers):
             st.title(f'{parsers_name[i]} Parser')
             parser = parser_class(GG)
@@ -114,6 +114,10 @@ def main2():
                 st.write('')
                 st.error(f'It\'s not {parsers_name[i]}!')
                 st.write(f'Conflictive string: **\"{action_goto_conflict(action, goto)}\"**')
+            else:
+                words[i] = st.text_area(f'Input a string to get the derivation tree of {parsers_name[i]} parser:')
+                if words[i]:
+                    st.graphviz_chart(str(make_tree(G, words[i], parser).graph()))
 
 
         #Regular Grammar Analysis
@@ -121,10 +125,14 @@ def main2():
         st.title('Is it a Regular Grammar?')
         is_Regular, nfa = analyzing_regularity(G)
         if is_Regular:
-            nfa._repr_png_().write_png('nfa.png')
+            st.subheader('It\'s regular')
+            st.subheader('NFA')
+            st.graphviz_chart(str(nfa.graph()))
             gnfa = AutomataToRegex(nfa).GetGNFA()
-            gnfa._repr_png_().write_png('gnfa.png')
-            print(AutomataToRegex(nfa).GetRegex())
+            st.subheader('GNFA')
+            st.graphviz_chart(str(gnfa.graph()))
+            st.subheader('Regular Expression')
+            st.write(AutomataToRegex(nfa).GetRegex())
         else:
             st.write('')
             st.error(f'It\'s not!')

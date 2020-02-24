@@ -1,0 +1,5 @@
+Distinguido = <S, 'S'>
+NoTerminales = [ <A, 'A'> ]
+Terminales = [ <a, 'a'>, <b, 'b'>, <d, 'd'> ]
+S = a + A
+A = a
