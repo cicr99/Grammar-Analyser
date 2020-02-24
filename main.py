@@ -9,12 +9,20 @@ from pprint import pprint
 from cmp.visual import *
 
 
+# text = '''
+# Distinguido = S
+# NoTerminales = [ A ]
+# Terminales = [ a, b, d ]
+# S = a + b + S; a + b + A; A
+# A = a + d; A + d; a + S; epsilon
+# '''
+
 text = '''
-Distinguido = S
-NoTerminales = [ A ]
-Terminales = [ a, b, d ]
-S = a + b + S; a + b + A; A
-A = a + d; A + d; a + S; epsilon
+Distinguido = <S, 'S'>
+NoTerminales = [ <A, 'A'> ]
+Terminales = [ <a, 'a'>, <b, 'b'>, <d, 'd'> ]
+S = a + A
+A = a + d; d; epsilon
 '''
 
 def main():
@@ -27,22 +35,28 @@ def main():
     # text = st.text_area('Input your grammar here:')
 
     if text:
-        G = grammar_from_input(text)
-        #G = GrammarFromInput(text).GiveGrammar()
-        st.write(G)
+        # G = grammar_from_input(text)
+        G = GrammarFromInput(text).GiveGrammar()
         simplifying_grammar(G)
-        st.write(G)
+        print(G)
+        firsts, follows, M, is_ll1 = ll1_analysis(G)
+        word = 'a a d'
+        if word:
+            print(make_tree_LL1(G, word, M, firsts, follows))
+        # st.write(G)
+        # simplifying_grammar(G)
+        # st.write(G)
 
         # firsts = compute_firsts(G)
         # follows = compute_follows(G, firsts)
         # M = build_parsing_table(G, firsts, follows)
 
         # st.dataframe(M)
-        nfa = GrammarToAutomata(G).CalculateRegularNFA()
-        nfa._repr_png_().write_png('nfa.png')
-        gnfa = AutomataToRegex(nfa).GetGNFA()
+        # nfa = GrammarToAutomata(G).CalculateRegularNFA()
+        # nfa._repr_png_().write_png('nfa.png')
+        # gnfa = AutomataToRegex(nfa).GetGNFA()
         # gnfa._repr_png_().write_png('gnfa.png')
-        print(AutomataToRegex(nfa).GetRegex())
+        # print(AutomataToRegex(nfa).GetRegex())
 
 
 
@@ -56,7 +70,8 @@ def main2():
     text = st.text_area('Input your grammar here:')
 
     if text:
-        G = grammar_from_input(text)
+        G = GrammarFromInput(text).GiveGrammar()
+        # G = grammar_from_input(text)
         display_grammar(G, 'Given Grammar')
 
         simplifying_grammar(G)
@@ -77,7 +92,8 @@ def main2():
         else:
             word = st.text_area('Input a string to get the derivation tree:')
             if word:
-                make_tree_LL1(G, word, M, firsts, follows)
+                # st.write(make_tree_LL1(G, word, M, firsts, follows))
+                st.graphviz_chart(str(make_tree_LL1(G, word, M, firsts, follows).graph()))
 
 
 

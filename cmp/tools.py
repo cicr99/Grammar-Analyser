@@ -1200,7 +1200,8 @@ def parse_string(G, word):
 def make_tree_LL1(G, w, M, firsts, follows):
     try:
         w = parse_string(G, w)
-        return derivation_tree(metodo_predictivo_no_recursivo(G, M, firsts, follows)(w))._repr_svg_('TD')
+        print(w)
+        return derivation_tree(deprecated_metodo_predictivo_no_recursivo(G, M, firsts, follows)(w))
     except Exception as e:
         return 'String not recognized'
 
