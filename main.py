@@ -93,6 +93,7 @@ def main2():
         else:
             word = st.text_area('Input a string to get the derivation tree:')
             if word:
+                st.subheader('Derivation tree of LL1:')
                 st.graphviz_chart(str(make_tree_LL1(G, word, M, firsts, follows).graph()))
 
 
@@ -110,6 +111,9 @@ def main2():
             display_table(action, G.terminals + [G.EOF], 'ACTION')
             display_table(goto, G.nonTerminals, 'GOTO')
 
+            st.subheader(f'{parsers_name[i]} Automata')
+            st.graphviz_chart(str(parser.automaton.graph()))
+
             if not ok:
                 st.write('')
                 st.error(f'It\'s not {parsers_name[i]}!')
@@ -117,6 +121,7 @@ def main2():
             else:
                 words[i] = st.text_area(f'Input a string to get the derivation tree of {parsers_name[i]} parser:')
                 if words[i]:
+                    st.subheader(f'Derivation tree of {parsers_name[i]}:')
                     st.graphviz_chart(str(make_tree(G, words[i], parser).graph()))
 
 
