@@ -1,0 +1,12 @@
+Distinguido = <S, 'S'>
+NoTerminales = [ <A, 'A'> ]
+Terminales = [ <a, 'a'>, <b, 'b'>, <d, 'd'> ]
+S = a + b + S; a + b + A; A
+A = a + d; A + d; a + S; epsilon
+
+
+Distinguido = <S, 'S'>
+NoTerminales = [ <X, 'X'>]
+Terminales = [<if, 'if'>, <then, 'then'>, <else, 'else'>, <num, 'num'>]
+S = if + X + then + S; if + X + then + S + else + S; num
+X = num

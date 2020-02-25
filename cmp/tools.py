@@ -829,20 +829,18 @@ def validate_conflict(w, M, G):
 
 def ll1_conflict(G, M):
     queue = []
-    mapped = {t.Name : t for t in G.terminals}
 
-    queue.append(([G.startSymbol], '', False))
+    queue.append(([G.startSymbol], [], False))
     while queue:
         prod, word, conflict = queue.pop(0)
         while prod and isinstance(prod[0], Terminal):
-            word += str(prod.pop(0))
+            word.append(prod.pop(0))
 
         if not prod:
             if conflict:
-                w = [mapped[item] for item in word]
-                w.append(G.EOF)
-                if validate_conflict(w, M, G):
-                    return word
+                if validate_conflict(word + [G.EOF], M, G):
+                    w = ' '.join([symbol.Name for symbol in word])
+                    return w
             continue
 
         symbol = prod.pop(0)
@@ -851,7 +849,7 @@ def ll1_conflict(G, M):
             for p in M[symbol][terminal]:
                 body = list(p.Right)
                 body.extend(prod)
-                queue.append((body, word, c))
+                queue.append((body, word.copy(), c))
 
 
 
@@ -1122,7 +1120,7 @@ class LALR1Parser(ShiftReduceParser):
 
 def action_goto_conflict(action, goto):
     # (stack, word, conflict, terminal)
-    queue = [([0], '', False, None)]
+    queue = [([0], [], False, None)]
 
     while queue:
         stack, word, conflict, terminal = queue.pop(0)
@@ -1131,12 +1129,12 @@ def action_goto_conflict(action, goto):
             if terminal is not None:
                 actions = action[state][terminal]
                 if any([act for act, _ in actions if act == SLR1Parser.OK]) and conflict:
-                    return word
+                    return ' '.join(word)
 
                 conflict |= (len(actions) > 1)
                 for act, tag in actions:
                     if act == SLR1Parser.SHIFT:
-                        queue.append((stack + [tag], word + terminal.Name, conflict, None))
+                        queue.append((stack + [tag], word + [terminal.Name], conflict, None))
                     elif act == SLR1Parser.REDUCE:
                         s = stack.copy()
                         if not tag.IsEpsilon:
@@ -1144,12 +1142,44 @@ def action_goto_conflict(action, goto):
                         data = goto[s[-1]][tag.Left]
                         c = (len(data) > 1) or conflict
                         for go in data:
-                            queue.append((s + [go], word, c, terminal))
+                            queue.append((s + [go], word.copy(), c, terminal))
             else:
                 for symbol in action[state]:
-                    queue.append((stack, word, conflict, symbol))
+                    queue.append((stack, word.copy(), conflict, symbol))
         except Exception as e:
             print(f'FAILURE {e}')
+
+
+# def action_goto_conflict(action, goto):
+#     # (stack, word, conflict, terminal)
+#     queue = [([0], '', False, None)]
+
+#     while queue:
+#         stack, word, conflict, terminal = queue.pop(0)
+#         state = stack[-1]
+#         try:
+#             if terminal is not None:
+#                 actions = action[state][terminal]
+#                 if any([act for act, _ in actions if act == SLR1Parser.OK]) and conflict:
+#                     return word
+
+#                 conflict |= (len(actions) > 1)
+#                 for act, tag in actions:
+#                     if act == SLR1Parser.SHIFT:
+#                         queue.append((stack + [tag], word + terminal.Name, conflict, None))
+#                     elif act == SLR1Parser.REDUCE:
+#                         s = stack.copy()
+#                         if not tag.IsEpsilon:
+#                             s = s[:-len(tag.Right)]
+#                         data = goto[s[-1]][tag.Left]
+#                         c = (len(data) > 1) or conflict
+#                         for go in data:
+#                             queue.append((s + [go], word, c, terminal))
+#             else:
+#                 for symbol in action[state]:
+#                     queue.append((stack, word, conflict, symbol))
+#         except Exception as e:
+#             print(f'FAILURE {e}')
 
 
 
@@ -1189,7 +1219,6 @@ def derivation_tree(d):
 
     return root
 
-
 def parse_string(G, word):
     m = {t.Name:t for t in G.terminals}
     word = word.split()
@@ -1203,7 +1232,6 @@ def make_tree_LL1(G, w, M, firsts, follows):
         return derivation_tree(deprecated_metodo_predictivo_no_recursivo(G, M, firsts, follows)(w))
     except Exception as e:
         return 'String not recognized'
-
 
 def make_tree(G, w, parser):
     try:
